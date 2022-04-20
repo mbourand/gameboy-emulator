@@ -1,5 +1,6 @@
 #include "Cartridge.hpp"
 #include <fstream>
+#include <iomanip>
 #include <stdexcept>
 
 namespace gbmu
@@ -8,7 +9,7 @@ namespace gbmu
 
 	void Cartridge::loadROM(const std::string& filename)
 	{
-		this->_bytes.clear();
+		this->bytes.clear();
 
 		std::ifstream file(filename, std::ios::binary | std::ios::ate);
 		if (!file.is_open())
@@ -17,7 +18,20 @@ namespace gbmu
 		const auto size = file.tellg();
 		file.seekg(0, std::ios::beg);
 
-		_bytes.resize(size);
-		file.read(reinterpret_cast<char*>(_bytes.data()), size);
+		this->bytes.resize(size);
+		file.read(reinterpret_cast<char*>(this->bytes.data()), size);
+	}
+
+	std::ostream& operator<<(std::ostream& os, const Cartridge& cartridge)
+	{
+		int i = 0;
+		for (const auto& byte : cartridge.bytes)
+		{
+			os << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte) << " ";
+			if (++i % 32 == 0)
+				os << std::endl;
+		}
+
+		return os;
 	}
 }

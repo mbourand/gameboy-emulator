@@ -7,8 +7,14 @@ namespace gbmu
 {
 	class Memory
 	{
+	public:
+		static constexpr size_t MEMORY_SIZE = 0xFFFF;
+
+		static constexpr size_t CARTRIDGE_START = 0x0000;
+		static constexpr size_t CARTRIDGE_END = 0x7FFF;
+
 	protected:
-		std::array<uint8_t, 0xFFFF> _bytes;
+		std::array<uint8_t, MEMORY_SIZE> _bytes;
 
 	public:
 		Memory() = default;
@@ -16,5 +22,8 @@ namespace gbmu
 		Memory& operator=(const Memory& other) = default;
 
 		void loadCartridge(const Cartridge& cartridge);
+
+		uint8_t readByte(uint16_t address);
+		void writeByte(uint16_t address, uint8_t value);
 	};
 }

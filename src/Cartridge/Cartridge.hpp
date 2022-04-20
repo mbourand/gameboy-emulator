@@ -7,8 +7,8 @@ namespace gbmu
 {
 	class Cartridge
 	{
-	protected:
-		std::vector<uint8_t> _bytes;
+	public:
+		std::vector<uint8_t> bytes;
 
 	public:
 		Cartridge() = default;
@@ -17,5 +17,9 @@ namespace gbmu
 		Cartridge& operator=(const Cartridge& other) = default;
 
 		void loadROM(const std::string& filename);
+
+		friend std::ostream& operator<<(std::ostream& os, const Cartridge& cartridge);
 	};
+
+	std::ostream& operator<<(std::ostream& os, const Cartridge& cartridge);
 }
