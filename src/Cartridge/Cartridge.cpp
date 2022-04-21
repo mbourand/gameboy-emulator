@@ -28,9 +28,10 @@ namespace gbmu
 		for (const auto& byte : cartridge.bytes)
 		{
 			os << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(byte) << " ";
-			if (++i % 32 == 0)
+			if (++i % 16 == 0)
 				os << std::endl;
 		}
+		os << std::dec << std::setfill(' ') << std::setw(0);
 
 		return os;
 	}

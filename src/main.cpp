@@ -1,3 +1,4 @@
+#include "CPU.hpp"
 #include "Cartridge.hpp"
 #include "Memory.hpp"
 #include <SFML/Graphics.hpp>
