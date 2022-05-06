@@ -19,7 +19,6 @@ int main(int argc, char** argv)
 	try
 	{
 		cartridge.loadROM(argv[1]);
-		std::cout << cartridge << std::endl;
 	}
 	catch (const std::exception& e)
 	{
@@ -31,6 +30,12 @@ int main(int argc, char** argv)
 	memory.loadCartridge(cartridge);
 
 	gbmu::CPU cpu(memory);
+	for (int i = 0; i < 12335; i++)
+	{
+		if (12335 - i < 100)
+			std::cout << cpu << std::endl;
+		cpu.tick();
+	}
 
 	while (window.isOpen())
 	{

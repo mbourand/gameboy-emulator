@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 # Sources
 
-add_executable(${PROJECT_NAME} src/main.cpp src/Memory/Memory.cpp src/CPU/CPU.cpp src/Cartridge/Cartridge.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/Memory/Memory.cpp src/CPU/CPU.cpp src/CPU/OpCodes.cpp src/Cartridge/Cartridge.cpp)
 
 # Building Libs
 

@@ -1,3 +1,5 @@
 .vscode
 build
 roms
+OPCODES.pdn
+out.txt
