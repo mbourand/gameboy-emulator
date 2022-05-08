@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Clock.hpp"
 #include "Memory.hpp"
+#include <SFML/Graphics.hpp>
 #include <iomanip>
 #include <iostream>
 
@@ -18,6 +20,10 @@ namespace gbmu
 		static constexpr uint16_t ENTRY_STACK_POINTER = 0xFFFE;
 
 		static constexpr uint8_t REGISTER_COUNT = 8;
+
+		static constexpr double CPU_FREQUENCY = 1000000000.0 / 4194304.0; // 4194304 Hz clock in nanoseconds
+		static constexpr double DIV_FREQUENCY = 1000000000.0 / 16384.0;   // 16384 Hz clock in nanoseconds
+
 		enum Register : uint8_t
 		{
 			B = 0,
@@ -32,6 +38,8 @@ namespace gbmu
 
 	protected:
 		Memory& _memory;
+		gbmu::Clock _divClock, _timaClock;
+		int _cycleTimer;
 
 	public:
 		/* A = Accumulator
@@ -40,11 +48,6 @@ namespace gbmu
 
 		uint16_t sp; // Stack pointer
 		uint16_t pc; // Program counter
-
-		uint32_t totalCycles;
-		uint16_t cycleTimer;
-
-		bool enable_interrupts;
 
 		CPU() = default;
 		CPU(const CPU& other) = default;
@@ -57,6 +60,7 @@ namespace gbmu
 		bool isFlagSet(uint8_t flag);
 
 		void tick();
+		void update_timers();
 		void perform_opcode(uint8_t opcode);
 
 	protected:
@@ -81,13 +85,36 @@ namespace gbmu
 		void dec_reg(int opcode);
 		void inc_reg(int opcode);
 		void dec_reg16(int opcode);
-		void jp_u16();
+		void jp_cond_u16(bool cond);
 		void ld_dec_hl_a();
 		void ld_inc_hl_a();
 		void ld_reg16_a(Register high, Register low);
 		void ld_reg16_u16(int opcode);
 		void ld_sp_u16();
 		void di_ei(int opcode);
+		void ldh_u8_a();
+		void ldh_c_a();
+		void ldh_a_u8();
+		void ldh_a_c();
+		void adc_a_u8();
+		void sbc_a_u8();
+		void xor_a_u8();
+		void cp_a_u8();
+		void ld_a_reg16(Register high, Register low);
+		void ld_a_reg16(Register high, Register low);
+		void ld_a_inc_hl();
+		void ld_a_dec_hl();
+		void add_a_hl();
+		void sub_a_hl();
+		void and_a_hl();
+		void or_a_hl();
+		void adc_a_hl();
+		void sbc_a_hl();
+		void xor_a_hl();
+		void cp_a_hl();
+		void call_cond_u16(bool cond);
+		void ret_cond(bool cond);
+		void ret();
 
 	public:
 		friend std::ostream& operator<<(std::ostream& os, const CPU& cpu);

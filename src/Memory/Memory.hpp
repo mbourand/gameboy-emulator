@@ -8,7 +8,7 @@ namespace gbmu
 	class Memory
 	{
 	public:
-		static constexpr size_t MEMORY_SIZE = 0xFFFF;
+		static constexpr size_t MEMORY_SIZE = 0x10000;
 
 		static constexpr size_t CARTRIDGE_START = 0x0000;
 		static constexpr size_t CARTRIDGE_END = 0x7FFF;

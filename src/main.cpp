@@ -1,5 +1,6 @@
 #include "CPU.hpp"
 #include "Cartridge.hpp"
+#include "Clock.hpp"
 #include "Memory.hpp"
 #include <SFML/Graphics.hpp>
 #include <iostream>
@@ -30,13 +31,15 @@ int main(int argc, char** argv)
 	memory.loadCartridge(cartridge);
 
 	gbmu::CPU cpu(memory);
-	for (int i = 0; i < 12335; i++)
+	for (int i = 0; i < 12350; i++)
 	{
-		if (12335 - i < 100)
+		if (12350 - i < 100)
 			std::cout << cpu << std::endl;
 		cpu.tick();
 	}
 
+	gbmu::Clock cpuClock(gbmu::CPU::CPU_FREQUENCY);
+	sf::Clock framerateClock;
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -46,8 +49,20 @@ int main(int argc, char** argv)
 				window.close();
 		}
 
-		window.clear();
-		window.display();
+		cpu.update_timers();
+
+		if (cpuClock.isTimeout())
+		{
+			cpuClock.reset();
+			cpu.tick();
+		}
+
+		if (framerateClock.getElapsedTime().asMilliseconds() > 1 / 60.f)
+		{
+			framerateClock.restart();
+			window.clear();
+			window.display();
+		}
 	}
 
 	return 0;
