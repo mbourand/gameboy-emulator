@@ -6,14 +6,14 @@ namespace gbmu
 		: _memory(memory), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0),
 		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0))
 	{
-		this->_registers[Register::A] = 0x01;
-		this->_registers[Register::F] = 0xB0;
-		this->_registers[Register::B] = 0x00;
-		this->_registers[Register::C] = 0x13;
-		this->_registers[Register::D] = 0x00;
-		this->_registers[Register::E] = 0xD8;
-		this->_registers[Register::H] = 0x01;
-		this->_registers[Register::L] = 0x4D;
+		this->registers[Register::A] = 0x01;
+		this->registers[Register::F] = 0xB0;
+		this->registers[Register::B] = 0x00;
+		this->registers[Register::C] = 0x13;
+		this->registers[Register::D] = 0x00;
+		this->registers[Register::E] = 0xD8;
+		this->registers[Register::H] = 0x01;
+		this->registers[Register::L] = 0x4D;
 
 		memory.writeByte(0xFF05, 0x00); // TIMA
 		memory.writeByte(0xFF06, 0x00); // TMA
@@ -62,8 +62,8 @@ namespace gbmu
 
 	void CPU::writeRegister16(Register high, Register low, uint16_t value)
 	{
-		uint8_t* high_ptr = &(this->_registers[static_cast<uint8_t>(high)]);
-		uint8_t* low_ptr = &(this->_registers[static_cast<uint8_t>(low)]);
+		uint8_t* high_ptr = &(this->registers[static_cast<uint8_t>(high)]);
+		uint8_t* low_ptr = &(this->registers[static_cast<uint8_t>(low)]);
 
 		*high_ptr = static_cast<uint8_t>(value >> 8);
 		*low_ptr = static_cast<uint8_t>(value & 0xFF);
@@ -71,8 +71,8 @@ namespace gbmu
 
 	uint16_t CPU::readRegister16(Register high, Register low)
 	{
-		uint8_t high_value = this->_registers[static_cast<uint8_t>(high)];
-		uint8_t low_value = this->_registers[static_cast<uint8_t>(low)];
+		uint8_t high_value = this->registers[static_cast<uint8_t>(high)];
+		uint8_t low_value = this->registers[static_cast<uint8_t>(low)];
 
 		return (static_cast<uint16_t>(high_value) << 8) | static_cast<uint16_t>(low_value);
 	}
@@ -105,5 +105,5 @@ namespace gbmu
 		}
 	}
 
-	bool CPU::isFlagSet(uint8_t flag) { return (this->_registers[static_cast<uint8_t>(Register::F)] & flag) != 0; }
+	bool CPU::isFlagSet(uint8_t flag) { return (this->registers[static_cast<uint8_t>(Register::F)] & flag) != 0; }
 }

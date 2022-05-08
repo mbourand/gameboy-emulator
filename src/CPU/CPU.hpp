@@ -36,6 +36,8 @@ namespace gbmu
 			A = 7
 		};
 
+		using Reg = Register;
+
 	protected:
 		Memory& _memory;
 		gbmu::Clock _divClock, _timaClock;
@@ -44,7 +46,7 @@ namespace gbmu
 	public:
 		/* A = Accumulator
 		** F = Flags */
-		std::array<uint8_t, REGISTER_COUNT> _registers;
+		std::array<uint8_t, REGISTER_COUNT> registers;
 
 		uint16_t sp; // Stack pointer
 		uint16_t pc; // Program counter
@@ -101,7 +103,6 @@ namespace gbmu
 		void xor_a_u8();
 		void cp_a_u8();
 		void ld_a_reg16(Register high, Register low);
-		void ld_a_reg16(Register high, Register low);
 		void ld_a_inc_hl();
 		void ld_a_dec_hl();
 		void add_a_hl();
@@ -115,6 +116,7 @@ namespace gbmu
 		void call_cond_u16(bool cond);
 		void ret_cond(bool cond);
 		void ret();
+		void jp_hl();
 
 	public:
 		friend std::ostream& operator<<(std::ostream& os, const CPU& cpu);
