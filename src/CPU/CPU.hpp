@@ -32,8 +32,8 @@ namespace gbmu
 			E = 3,
 			H = 4,
 			L = 5,
-			F = 6,
-			A = 7
+			A = 6,
+			F = 7
 		};
 
 		using Reg = Register;
@@ -67,7 +67,7 @@ namespace gbmu
 
 	protected:
 		void nop();
-		void inc_bc();
+		void inc_reg16(int opcode);
 		void rlca();
 		void ld_u16_sp();
 		void add_hl_bc();
@@ -109,6 +109,10 @@ namespace gbmu
 		void sub_a_hl();
 		void and_a_hl();
 		void or_a_hl();
+		void add_a_u8();
+		void sub_a_u8();
+		void and_a_u8();
+		void or_a_u8();
 		void adc_a_hl();
 		void sbc_a_hl();
 		void xor_a_hl();
@@ -117,6 +121,17 @@ namespace gbmu
 		void ret_cond(bool cond);
 		void ret();
 		void jp_hl();
+		void reti();
+		void rst(int opcode);
+		void push_reg16(int opcode);
+		void pop_reg16(int opcode);
+		void inc_hl();
+		void dec_hl();
+		void add_sp_i8();
+		void ld_hl_sp_i8();
+		void ld_sp_hl();
+		void ld_u16_a();
+		void ld_a_u16();
 
 	public:
 		friend std::ostream& operator<<(std::ostream& os, const CPU& cpu);
