@@ -16,6 +16,8 @@ namespace gbmu
 		Clock(double frequency);
 
 		bool isTimeout() const;
+		long long getElapsedTime() const;
+
 		void reset();
 	};
 }

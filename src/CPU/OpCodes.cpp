@@ -13,12 +13,20 @@ namespace gbmu
 				this->ld_reg16_u16(opcode); break;
 			case 0x31: // LD SP, u16
 				this->ld_sp_u16(); break;
-			case 0x07: // RLCA (Rotate left through carry accumulator)
+			case 0x07: // RLCA
 				this->rlca(); break;
+			case 0x17: // RLA
+				this->rla(); break;
+			case 0x0F: // RRCA
+				this->rrca(); break;
+			case 0x1F: // RRA
+				this->rra(); break;
 			case 0x08: // LD (u16), SP
 				this->ld_u16_sp(); break;
-			case 0x09: // ADD HL, BC
-				this->add_hl_bc(); break;
+			case 0x09: case 0x19: case 0x29: // ADD HL, reg16
+				this->add_hl_reg16(opcode); break;
+			case 0x39: // ADD HL, SP
+				this->add_hl_sp(opcode); break;
 			case 0x20: // JR NZ, i8
 				this->jr_cond_i8(!this->isFlagSet(FLAG_ZERO)); break;
 			case 0x30: // JR NC, i8
@@ -166,7 +174,7 @@ namespace gbmu
 			case 0xC5: case 0xD5: case 0xE5: case 0xF5: // PUSH reg16
 				this->push_reg16(opcode); break;
 			case 0xC1: case 0xD1: case 0xE1: case 0xF1: // POP reg16
-				this->push_reg16(opcode); break;
+				this->pop_reg16(opcode); break;
 			case 0x03: case 0x13: case 0x23: case 0x33: // INC reg16
 				this->inc_reg16(opcode); break;
 			case 0xE8: // ADD SP, i8
@@ -179,6 +187,20 @@ namespace gbmu
 				this->ld_u16_a(); break;
 			case 0xFA: // LD A, (u16)
 				this->ld_a_u16(); break;
+			case 0x36: // LD (HL), u8
+				this->ld_hl_u8(); break;
+			case 0x2F: // CPL
+				this->cpl(); break;
+			case 0x3F: // CCF
+				this->ccf(); break;
+			case 0x37: // SCF
+				this->scf(); break;
+			case 0x27: // DAA
+				this->daa(); break;
+			case 0x76: // HALT
+				this->halt(); break;
+			case 0x10: // STOP
+				this->stop(); break;
 				/* clang-format on */
 			default: // Unknown opcode
 				this->pc++;
@@ -226,22 +248,35 @@ namespace gbmu
 		this->_cycleTimer += 4;
 	}
 
+	void CPU::rrca()
+	{
+		this->registers[Reg::F] = (this->registers[Reg::A] & 0x01) ? FLAG_CARRY : 0;
+		this->registers[Reg::A] = (this->registers[Reg::A] >> 1) | (this->registers[Reg::A] << 7);
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::rla()
+	{
+		this->registers[Reg::F] = (this->registers[Reg::A] & 0x80) ? FLAG_CARRY : 0;
+		this->registers[Reg::A] <<= 1;
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::rra()
+	{
+		this->registers[Reg::F] = (this->registers[Reg::A] & 0x01) ? FLAG_CARRY : 0;
+		this->registers[Reg::A] >>= 1;
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
 	void CPU::ld_u16_sp()
 	{
 		this->_memory.writeWord(this->_memory.readWord(this->pc + 1), this->sp);
 		this->pc += 3;
 		this->_cycleTimer += 20;
-	}
-
-	void CPU::add_hl_bc()
-	{
-		uint16_t hl = this->readRegister16(Reg::H, Reg::L), bc = this->readRegister16(Reg::B, Reg::C);
-		uint8_t h = this->registers[Reg::H], b = this->registers[Reg::B];
-		this->registers[Reg::F] |=
-			((h & 0xF) + (b & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) | (h + b > 0xFF ? FLAG_CARRY : 0);
-		this->writeRegister16(Reg::H, Reg::L, hl + bc);
-		this->pc++;
-		this->_cycleTimer += 8;
 	}
 
 	void CPU::ld_reg_reg(uint8_t opcode)
@@ -386,7 +421,7 @@ namespace gbmu
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->registers[opcode & 0b111];
 		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
-		this->registers[Reg::A] ^= this->registers[opcode & 0b111];
+		this->registers[Reg::A] ^= src;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
@@ -395,7 +430,7 @@ namespace gbmu
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->registers[opcode & 0b111];
 		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
-		this->registers[Reg::A] |= this->registers[opcode & 0b111];
+		this->registers[Reg::A] |= src;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
@@ -472,10 +507,10 @@ namespace gbmu
 
 	void CPU::dec_reg16(int opcode)
 	{
-		uint16_t val = this->readRegister16(static_cast<Register>((opcode + 0x40 >> 3 & 0b111) - 1),
-											static_cast<Register>(opcode + 0x40 >> 3 & 0b111));
-		this->writeRegister16(static_cast<Register>((opcode + 0x40 >> 3 & 0b111) - 1),
-							  static_cast<Register>(opcode + 0x40 >> 3 & 0b111), --val);
+		Reg high = static_cast<Reg>((opcode - 0x0B) / 16 * 2);
+		Reg low = static_cast<Reg>(high + 1);
+		uint16_t val = this->readRegister16(high, low);
+		this->writeRegister16(high, low, --val);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -488,8 +523,10 @@ namespace gbmu
 			this->_cycleTimer += 16;
 		}
 		else
+		{
 			this->_cycleTimer += 12;
-		this->pc += 3;
+			this->pc += 3;
+		}
 	}
 
 	void CPU::ld_dec_hl_a()
@@ -520,7 +557,10 @@ namespace gbmu
 
 	void CPU::di_ei(int opcode)
 	{
-		this->_memory.writeByte(0xFFFF, (opcode & 0xF) == 0xB);
+		if (opcode == 0xFB)
+			this->_ei_next_instruction = true;
+		else
+			this->ime = false;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
@@ -668,6 +708,7 @@ namespace gbmu
 	{
 		this->pc = this->_memory.readWord(this->sp);
 		this->sp += 2;
+		this->ime = true;
 		this->_cycleTimer += 16;
 	}
 
@@ -723,6 +764,12 @@ namespace gbmu
 	{
 		Reg high = static_cast<Reg>((opcode - 0xC5) / 16 * 2);
 		Reg low = static_cast<Reg>(high + 1);
+		// Because reg enum is matched with ld opcode order (bcdehlfa) instead of reg16 order (bcdehlaf)
+		if (high == Reg::F)
+		{
+			high = Reg::A;
+			low = Reg::F;
+		}
 		uint16_t val = this->readRegister16(high, low);
 		this->sp -= 2;
 		this->_memory.writeWord(this->sp, val);
@@ -734,10 +781,16 @@ namespace gbmu
 	{
 		Reg high = static_cast<Reg>((opcode - 0xC1) / 16 * 2);
 		Reg low = static_cast<Reg>(high + 1);
+		// Because reg enum is matched with ld opcode order (bcdehlfa) instead of reg16 order (bcdehlaf)
+		if (high == Reg::F)
+		{
+			high = Reg::A;
+			low = Reg::F;
+		}
 		uint16_t val = this->_memory.readWord(this->sp);
 		this->sp += 2;
 		this->writeRegister16(high, low, val);
-		if (high == Reg::F)
+		if (low == Reg::F)
 			this->registers[Reg::F] &= 0xF0;
 		this->pc++;
 		this->_cycleTimer += 12;
@@ -808,9 +861,100 @@ namespace gbmu
 		this->_cycleTimer += 16;
 	}
 
+	void CPU::ld_hl_u8()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		this->_memory.writeByte(addr, this->_memory.readByte(this->pc + 1));
+		this->pc += 2;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::add_hl_reg16(int opcode)
+	{
+		Reg high = static_cast<Reg>((opcode - 0x09) / 16 * 2);
+		Reg low = static_cast<Reg>(high + 1);
+		uint16_t hl = this->readRegister16(Reg::H, Reg::L);
+		uint16_t val = this->readRegister16(high, low);
+		this->registers[Reg::F] = ((hl & 0xFF) + (val & 0xFF) > 0xFF ? FLAG_CARRY : 0) |
+								  ((hl & 0xF) + (val & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) | this->isFlagSet(FLAG_ZERO);
+		this->writeRegister16(Reg::H, Reg::L, hl + val);
+	}
+
+	void CPU::add_hl_sp(int opcode)
+	{
+		uint16_t hl = this->readRegister16(Reg::H, Reg::L);
+		this->registers[Reg::F] = ((hl & 0xFF) + (this->sp & 0xFF) > 0xFF ? FLAG_CARRY : 0) |
+								  ((hl & 0xF) + (this->sp & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
+								  this->isFlagSet(FLAG_ZERO);
+		this->writeRegister16(Reg::H, Reg::L, hl + this->sp);
+	}
+
+	void CPU::ccf()
+	{
+		this->registers[Reg::F] = this->isFlagSet(FLAG_ZERO) | !this->isFlagSet(FLAG_CARRY);
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::cpl()
+	{
+		this->registers[Reg::A] = ~this->registers[Reg::A];
+		this->registers[Reg::F] = FLAG_NEGATIVE | FLAG_HALF_CARRY;
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::scf()
+	{
+		this->registers[Reg::F] = FLAG_CARRY | this->isFlagSet(FLAG_ZERO);
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::daa()
+	{
+		bool carry = this->isFlagSet(FLAG_CARRY);
+		bool halfCarry = this->isFlagSet(FLAG_HALF_CARRY);
+		bool negative = this->isFlagSet(FLAG_NEGATIVE);
+
+		this->registers[Reg::F] = this->isFlagSet(FLAG_NEGATIVE);
+
+		if (!this->isFlagSet(FLAG_NEGATIVE))
+		{
+			if (carry || this->registers[Reg::A] > 0x99)
+			{
+				this->registers[Reg::A] += 0x60;
+				this->registers[Reg::F] |= FLAG_CARRY;
+			}
+			if (halfCarry || (this->registers[Reg::A] & 0x0F) > 0x09)
+				this->registers[Reg::A] += 0x06;
+		}
+		else
+		{
+			if (carry)
+				this->registers[Reg::A] -= 0x60;
+			if (halfCarry)
+				this->registers[Reg::A] -= 0x06;
+		}
+
+		this->registers[Reg::F] |= (this->registers[Reg::A] == 0 ? FLAG_ZERO : 0);
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::halt()
+	{
+		this->halted = true;
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
+
+	void CPU::stop() {}
+
 	std::ostream& operator<<(std::ostream& os, const CPU& cpu)
 	{
-		os << std::hex << std::setw(4) << std::setfill('0') << cpu.pc << ": ";
+		os << std::hex << std::setw(4) << std::setfill('0') << cpu.pc << ":  " << std::setw(2) << std::setfill('0')
+		   << (int)cpu._memory.readByte(cpu.pc) << "     ";
 		os << "A:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::A]) << " "
 		   << "F:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::F]) << " "
 		   << "B:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::B]) << " "

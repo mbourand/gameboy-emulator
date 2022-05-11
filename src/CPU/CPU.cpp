@@ -4,7 +4,8 @@ namespace gbmu
 {
 	CPU::CPU(Memory& memory)
 		: _memory(memory), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0),
-		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0))
+		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0)), halted(false), ime(true),
+		  _ei_next_instruction(false)
 	{
 		this->registers[Register::A] = 0x01;
 		this->registers[Register::F] = 0xB0;
@@ -45,19 +46,45 @@ namespace gbmu
 		memory.writeByte(0xFF49, 0xFF); // OBP1
 		memory.writeByte(0xFF4A, 0x00); // WY
 		memory.writeByte(0xFF4B, 0x00); // WX
-		memory.writeByte(0xFFFF, 0x00); // Interrupt enable
+		memory.writeByte(0xFFFF, 0x00); // IE
 	}
 
 	void CPU::tick()
 	{
 		if (this->_cycleTimer > 0)
 		{
-			--this->_cycleTimer;
+			this->_cycleTimer -= 4;
 			return;
 		}
 
-		uint8_t opcode = _memory.readByte(pc);
-		perform_opcode(opcode);
+		if (this->ime)
+		{
+			for (uint8_t bit = 0; bit < 5; ++bit)
+			{
+				if ((this->_memory.readByte(0xFF0F) & (1 << bit)) && (this->_memory.readByte(0xFFFF) & (1 << bit)))
+				{
+					this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) & ~(1 << bit));
+					this->ime = false;
+					this->_cycleTimer = 20;
+					this->sp -= 2;
+					this->_memory.writeWord(this->sp, this->pc);
+					this->pc = 0x0040 + bit * 8;
+					return;
+				}
+			}
+		}
+
+		if (!this->halted)
+		{
+			uint8_t opcode = this->_memory.readByte(this->pc);
+			perform_opcode(opcode);
+		}
+
+		if (this->_ei_next_instruction)
+		{
+			this->_ei_next_instruction = false;
+			this->ime = true;
+		}
 	}
 
 	void CPU::writeRegister16(Register high, Register low, uint16_t value)
@@ -98,11 +125,19 @@ namespace gbmu
 				this->_timaClock.reset();
 				uint8_t tima = this->_memory.readByte(0xFF05);
 				if (tima == 0xFF)
+				{
 					this->_memory.writeByte(0xFF05, this->_memory.readByte(0xFF06));
+					this->_request_interrupt(Interrupt::Timer);
+				}
 				else
 					this->_memory.writeByte(0xFF05, tima + 1);
 			}
 		}
+	}
+
+	void CPU::_request_interrupt(Interrupt interrupt)
+	{
+		this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | interrupt);
 	}
 
 	bool CPU::isFlagSet(uint8_t flag) { return (this->registers[static_cast<uint8_t>(Register::F)] & flag) != 0; }

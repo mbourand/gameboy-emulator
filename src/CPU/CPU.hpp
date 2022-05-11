@@ -2,6 +2,7 @@
 
 #include "Clock.hpp"
 #include "Memory.hpp"
+#include "utils.hpp"
 #include <SFML/Graphics.hpp>
 #include <iomanip>
 #include <iostream>
@@ -21,8 +22,8 @@ namespace gbmu
 
 		static constexpr uint8_t REGISTER_COUNT = 8;
 
-		static constexpr double CPU_FREQUENCY = 1000000000.0 / 4194304.0; // 4194304 Hz clock in nanoseconds
-		static constexpr double DIV_FREQUENCY = 1000000000.0 / 16384.0;   // 16384 Hz clock in nanoseconds
+		static constexpr double CPU_FREQUENCY = 1000000000.0 / (4194304.0 / 4.0); // 4194304 Hz clock in nanoseconds
+		static constexpr double DIV_FREQUENCY = 1000000000.0 / 16384.0;           // 16384 Hz clock in nanoseconds
 
 		enum Register : uint8_t
 		{
@@ -32,8 +33,8 @@ namespace gbmu
 			E = 3,
 			H = 4,
 			L = 5,
-			A = 6,
-			F = 7
+			F = 6,
+			A = 7
 		};
 
 		using Reg = Register;
@@ -41,15 +42,20 @@ namespace gbmu
 	protected:
 		Memory& _memory;
 		gbmu::Clock _divClock, _timaClock;
-		int _cycleTimer;
+
+		bool _ei_next_instruction = true;
 
 	public:
+		int _cycleTimer;
 		/* A = Accumulator
 		** F = Flags */
 		std::array<uint8_t, REGISTER_COUNT> registers;
 
 		uint16_t sp; // Stack pointer
 		uint16_t pc; // Program counter
+
+		bool halted;
+		bool ime; // Interrupt master enable
 
 		CPU() = default;
 		CPU(const CPU& other) = default;
@@ -66,11 +72,12 @@ namespace gbmu
 		void perform_opcode(uint8_t opcode);
 
 	protected:
+		void _request_interrupt(Interrupt interrupt);
+
 		void nop();
 		void inc_reg16(int opcode);
 		void rlca();
 		void ld_u16_sp();
-		void add_hl_bc();
 		void ld_reg_reg(uint8_t opcode);
 		void add_a_reg(uint8_t opcode);
 		void adc_a_reg(uint8_t opcode);
@@ -132,6 +139,18 @@ namespace gbmu
 		void ld_sp_hl();
 		void ld_u16_a();
 		void ld_a_u16();
+		void ld_hl_u8();
+		void add_hl_reg16(int opcode);
+		void add_hl_sp(int opcode);
+		void ccf();
+		void cpl();
+		void scf();
+		void daa();
+		void rla();
+		void rra();
+		void rrca();
+		void halt();
+		void stop();
 
 	public:
 		friend std::ostream& operator<<(std::ostream& os, const CPU& cpu);

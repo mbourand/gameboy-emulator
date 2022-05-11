@@ -2,24 +2,28 @@
 #include "Cartridge.hpp"
 #include "Clock.hpp"
 #include "Memory.hpp"
+#include "PPU.hpp"
 #include <SFML/Graphics.hpp>
+#include <fstream>
 #include <iostream>
 
 int main(int argc, char** argv)
 {
+	std::string path;
 	if (argc != 2)
 	{
 		std::cout << "Usage: " << argv[0] << " <rom_file>" << std::endl;
 		return 1;
 	}
+	else
+		path = argv[1];
 
-	sf::RenderWindow window(sf::VideoMode(640, 480), "GBMU");
-	window.setFramerateLimit(60);
+	sf::RenderWindow window(sf::VideoMode(160 * 4, 144 * 4), "GBMU");
 
 	gbmu::Cartridge cartridge;
 	try
 	{
-		cartridge.loadROM(argv[1]);
+		cartridge.loadROM(path);
 	}
 	catch (const std::exception& e)
 	{
@@ -31,15 +35,16 @@ int main(int argc, char** argv)
 	memory.loadCartridge(cartridge);
 
 	gbmu::CPU cpu(memory);
-	for (int i = 0; i < 12350; i++)
-	{
-		if (12350 - i < 100)
-			std::cout << cpu << std::endl;
-		cpu.tick();
-	}
+	gbmu::PPU ppu(memory);
 
 	gbmu::Clock cpuClock(gbmu::CPU::CPU_FREQUENCY);
+	gbmu::Clock ppuClock(gbmu::PPU::PPU_FREQUENCY);
 	sf::Clock framerateClock;
+
+	std::ofstream logFile("../../log.txt");
+
+	std::vector<int> ops;
+
 	while (window.isOpen())
 	{
 		sf::Event event;
@@ -54,14 +59,41 @@ int main(int argc, char** argv)
 		if (cpuClock.isTimeout())
 		{
 			cpuClock.reset();
+			if (cpu._cycleTimer == 0)
+			{
+				logFile << cpu;
+				logFile << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
+			}
+			uint8_t op = memory.readByte(cpu.pc);
+			if (std::find(ops.begin(), ops.end(), op) == ops.end())
+			{
+				std::cout << (int)op << std::endl;
+				ops.push_back(op);
+			}
 			cpu.tick();
 		}
 
-		if (framerateClock.getElapsedTime().asMilliseconds() > 1 / 60.f)
+		if (ppuClock.isTimeout())
+		{
+			ppuClock.reset();
+			ppu.tick();
+		}
+
+		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 60.f)
 		{
 			framerateClock.restart();
-			window.clear();
-			window.display();
+
+			const sf::Image& image = ppu.getImage();
+			sf::Texture texture;
+			if (texture.loadFromImage(image))
+			{
+				window.clear();
+				sf::Sprite sprite;
+				sprite.setTexture(texture);
+				sprite.setScale({4.f, 4.f});
+				window.draw(sprite);
+				window.display();
+			}
 		}
 	}
 
