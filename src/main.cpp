@@ -37,33 +37,28 @@ int main(int argc, char** argv)
 	gbmu::CPU cpu(memory);
 	gbmu::PPU ppu(memory);
 
-	gbmu::Clock cpuClock(gbmu::CPU::CPU_FREQUENCY);
-	gbmu::Clock ppuClock(gbmu::PPU::PPU_FREQUENCY);
 	sf::Clock framerateClock;
 
 	std::ofstream logFile("../../log.txt");
 
 	std::vector<int> ops;
+	sf::Event event;
 
+	int cyc = 0;
+	auto time = std::chrono::high_resolution_clock::now();
 	while (window.isOpen())
 	{
-		sf::Event event;
 		while (window.pollEvent(event))
 		{
 			if (event.type == sf::Event::Closed)
 				window.close();
 		}
 
-		cpu.update_timers();
-
-		if (cpuClock.isTimeout())
+		if (cyc < gbmu::CPU::CPU_FREQUENCY / 60)
 		{
-			cpuClock.reset();
+			cpu.update_timers();
 			if (cpu._cycleTimer == 0)
-			{
-				logFile << cpu;
-				logFile << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
-			}
+				logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
 			uint8_t op = memory.readByte(cpu.pc);
 			if (std::find(ops.begin(), ops.end(), op) == ops.end())
 			{
@@ -71,16 +66,14 @@ int main(int argc, char** argv)
 				ops.push_back(op);
 			}
 			cpu.tick();
-		}
-
-		if (ppuClock.isTimeout())
-		{
-			ppuClock.reset();
 			ppu.tick();
+			cyc++;
 		}
 
 		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 60.f)
 		{
+			// std::cout << cyc << std::endl;
+			cyc = 0;
 			framerateClock.restart();
 
 			const sf::Image& image = ppu.getImage();

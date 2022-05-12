@@ -32,6 +32,18 @@ namespace gbmu
 			LCDEnable = 0b10000000
 		};
 
+		enum LCDStatus : uint8_t
+		{
+			HBlankMode = 0,
+			VBlankMode = 1,
+			OAMSearchMode = 2,
+			PixelTransferMode = 3,
+			LycLyCoincidenceInt = 0b01000000,
+			OAMSearchInt = 0b00100000,
+			VBlankInt = 0b00010000,
+			HBlankInt = 0b00001000
+		};
+
 	protected:
 		Memory& _memory;
 		State _state;
@@ -51,5 +63,6 @@ namespace gbmu
 
 	protected:
 		void _pixelTransfer();
+		void _updateLCDStatus(uint8_t interruptsToCheck);
 	};
 }

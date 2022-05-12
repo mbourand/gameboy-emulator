@@ -22,8 +22,8 @@ namespace gbmu
 
 		static constexpr uint8_t REGISTER_COUNT = 8;
 
-		static constexpr double CPU_FREQUENCY = 1000000000.0 / (4194304.0 / 4.0); // 4194304 Hz clock in nanoseconds
-		static constexpr double DIV_FREQUENCY = 1000000000.0 / 16384.0;           // 16384 Hz clock in nanoseconds
+		static constexpr double CPU_FREQUENCY = (4194304.0 / 4.0);
+		static constexpr uint32_t DIV_FREQUENCY = 16384; // 16384 Hz clock in nanoseconds
 
 		enum Register : uint8_t
 		{
@@ -44,6 +44,9 @@ namespace gbmu
 		gbmu::Clock _divClock, _timaClock;
 
 		bool _ei_next_instruction = true;
+
+		uint64_t _ticks;
+		uint64_t _divLastInc, _timaLastInc;
 
 	public:
 		int _cycleTimer;

@@ -4,8 +4,8 @@ namespace gbmu
 {
 	CPU::CPU(Memory& memory)
 		: _memory(memory), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0),
-		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0)), halted(false), ime(true),
-		  _ei_next_instruction(false)
+		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0)), halted(false), ime(false), _ticks(0),
+		  _divLastInc(0), _timaLastInc(0), _ei_next_instruction(false)
 	{
 		this->registers[Register::A] = 0x01;
 		this->registers[Register::F] = 0xB0;
@@ -53,6 +53,7 @@ namespace gbmu
 	{
 		if (this->_cycleTimer > 0)
 		{
+			this->_ticks++;
 			this->_cycleTimer -= 4;
 			return;
 		}
@@ -74,16 +75,16 @@ namespace gbmu
 			}
 		}
 
-		if (!this->halted)
-		{
-			uint8_t opcode = this->_memory.readByte(this->pc);
-			perform_opcode(opcode);
-		}
-
 		if (this->_ei_next_instruction)
 		{
 			this->_ei_next_instruction = false;
 			this->ime = true;
+		}
+
+		if (!this->halted)
+		{
+			uint8_t opcode = this->_memory.readByte(this->pc);
+			perform_opcode(opcode);
 		}
 	}
 
@@ -106,23 +107,23 @@ namespace gbmu
 
 	void CPU::update_timers()
 	{
-		if (this->_divClock.isTimeout())
+		if (this->_ticks - this->_divLastInc >= CPU::CPU_FREQUENCY / CPU::DIV_FREQUENCY)
 		{
-			this->_divClock.reset();
+			this->_divLastInc = this->_ticks;
 			this->_memory.writeByte(0xFF04, this->_memory.readByte(0xFF04) + 1);
+			this->_request_interrupt(Interrupt::Timer);
 		}
 
 		uint8_t timer_control = this->_memory.readByte(0xFF07);
 		if (timer_control & 0b100)
 		{
-			auto timer_frequency = CPU::CPU_FREQUENCY * (4 << (timer_control & 0b11) * 2);
+			auto timer_frequency = CPU::CPU_FREQUENCY / (4 << (timer_control & 0b11) * 2);
 			if ((timer_control & 0b11) == 0)
-				timer_frequency = CPU::CPU_FREQUENCY * 1024;
-			this->_timaClock.frequency = timer_frequency;
+				timer_frequency = CPU::CPU_FREQUENCY / 1024;
 
-			if (this->_timaClock.isTimeout())
+			if (this->_ticks - this->_timaLastInc >= timer_frequency)
 			{
-				this->_timaClock.reset();
+				this->_timaLastInc = this->_ticks;
 				uint8_t tima = this->_memory.readByte(0xFF05);
 				if (tima == 0xFF)
 				{

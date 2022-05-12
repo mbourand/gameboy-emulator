@@ -22,6 +22,7 @@ namespace gbmu
 			this->_state = State::OAMSearch;
 			this->_ticks = 0;
 			this->_memory.writeByte(0xFF44, 0);
+			this->_updateLCDStatus(0x0);
 			return;
 		}
 		auto entryState = this->_state;
@@ -29,13 +30,17 @@ namespace gbmu
 		{
 			case State::OAMSearch:
 				if (this->_ticks == 20)
+				{
 					this->_state = State::PixelTransfer;
+					this->_updateLCDStatus(0x0);
+				}
 				break;
 			case State::PixelTransfer:
 				if (this->_ticks == 43)
 				{
 					this->_pixelTransfer();
 					this->_state = State::HBlank;
+					this->_updateLCDStatus(LCDStatus::HBlankInt);
 				}
 				break;
 			case State::HBlank:
@@ -44,29 +49,64 @@ namespace gbmu
 					this->_memory.writeByte(0xFF44, this->_memory.readByte(0xFF44) + 1);
 					if (this->_memory.readByte(0xFF44) == 144)
 					{
-						this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::VBlank);
 						this->_state = State::VBlank;
+						this->_updateLCDStatus(LCDStatus::VBlankInt | LCDStatus::LycLyCoincidenceInt);
 						this->_finishedLcdPixels = this->_lcdPixels;
 					}
 					else
+					{
 						this->_state = State::OAMSearch;
+						this->_updateLCDStatus(LCDStatus::OAMSearchInt | LCDStatus::LycLyCoincidenceInt);
+					}
 				}
 				break;
 			case State::VBlank:
 				if (this->_ticks % (20 + 43 + 51) == 0 && this->_ticks != 0)
+				{
 					this->_memory.writeByte(0xFF44, this->_memory.readByte(0xFF44) + 1);
+					this->_updateLCDStatus(LCDStatus::LycLyCoincidenceInt);
+				}
 				if (this->_ticks == (20 + 43 + 51) * 10)
 				{
 					this->_memory.writeByte(0xFF44, 0);
 					this->_state = State::OAMSearch;
+					this->_updateLCDStatus(LCDStatus::OAMSearchInt);
 				}
 				break;
 		}
 
+		this->_updateLCDStatus(0x0);
 		if (entryState != this->_state)
 			this->_ticks = 0;
 		else
 			this->_ticks++;
+	}
+
+	void PPU::_updateLCDStatus(uint8_t interruptsToCheck)
+	{
+		LCDStatus mode;
+		/* clang-format off */
+		switch (this->_state)
+		{
+			case State::OAMSearch: mode = LCDStatus::OAMSearchMode; break;
+			case State::PixelTransfer: mode = LCDStatus::PixelTransferMode; break;
+			case State::HBlank: mode = LCDStatus::HBlankMode; break;
+			case State::VBlank: mode = LCDStatus::VBlankMode; break;
+		}
+		/* clang-format on */
+		uint8_t lcdStatus = this->_memory.readByte(0xFF41);
+		uint8_t ly = this->_memory.readByte(0xFF44);
+		uint8_t lyc = this->_memory.readByte(0xFF45);
+		lcdStatus = (lcdStatus & 0b11111000) | mode | ((ly == lyc) << 2);
+		this->_memory.writeByte(0xFF41, lcdStatus);
+		if (ly == lyc && (lcdStatus & interruptsToCheck & LCDStatus::LycLyCoincidenceInt))
+			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+		if (mode == LCDStatus::VBlankMode && (lcdStatus & interruptsToCheck & LCDStatus::VBlankInt))
+			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+		if (mode == LCDStatus::HBlankMode && (lcdStatus & interruptsToCheck & LCDStatus::HBlankInt))
+			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+		if (mode == LCDStatus::OAMSearchMode && (lcdStatus & interruptsToCheck & LCDStatus::OAMSearchInt))
+			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
 	}
 
 	void PPU::_pixelTransfer()

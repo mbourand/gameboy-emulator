@@ -328,7 +328,7 @@ namespace gbmu
 	void CPU::or_a_hl()
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
-		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest | src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] |= src;
 		this->pc++;
 		this->_cycleTimer += 8;
@@ -429,7 +429,7 @@ namespace gbmu
 	void CPU::or_a_reg(uint8_t opcode)
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->registers[opcode & 0b111];
-		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest | src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] |= src;
 		this->pc++;
 		this->_cycleTimer += 4;
@@ -628,8 +628,8 @@ namespace gbmu
 	void CPU::cp_a_u8()
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
-		this->registers[Reg::F] = ((dest & 0xF) - (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
-								  (dest < src ? FLAG_CARRY : 0) | (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
+		this->registers[Reg::F] = ((dest & 0xF) < (src & 0xF) ? FLAG_HALF_CARRY : 0) | (dest < src ? FLAG_CARRY : 0) |
+								  (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
 		this->pc += 2;
 		this->_cycleTimer += 8;
 	}
@@ -754,7 +754,7 @@ namespace gbmu
 	void CPU::or_a_u8()
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
-		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest | src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] |= src;
 		this->pc += 2;
 		this->_cycleTimer += 8;
@@ -963,7 +963,8 @@ namespace gbmu
 		   << "E:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::E]) << " "
 		   << "H:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::H]) << " "
 		   << "L:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::L]) << " "
-		   << "SP:" << std::setw(4) << std::setfill('0') << static_cast<uint16_t>(cpu.sp);
+		   << "SP:" << std::setw(4) << std::setfill('0') << static_cast<uint16_t>(cpu.sp) << "  CY:" << std::dec
+		   << cpu._ticks;
 		return os;
 	}
 }
