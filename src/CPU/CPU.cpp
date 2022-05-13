@@ -84,7 +84,14 @@ namespace gbmu
 		if (!this->halted)
 		{
 			uint8_t opcode = this->_memory.readByte(this->pc);
-			perform_opcode(opcode);
+			if (opcode == 0xCB) // PREFIX CB
+			{
+				this->_cycleTimer += 4;
+				opcode = this->_memory.readByte(++this->pc);
+				perform_opcode_cb(opcode);
+			}
+			else
+				perform_opcode(opcode);
 		}
 	}
 

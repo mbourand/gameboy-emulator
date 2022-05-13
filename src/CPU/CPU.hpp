@@ -73,14 +73,26 @@ namespace gbmu
 		void tick();
 		void update_timers();
 		void perform_opcode(uint8_t opcode);
+		void perform_opcode_cb(uint8_t opcode);
 
 	protected:
 		void _request_interrupt(Interrupt interrupt);
 
 		void nop();
+		void sla_reg8(Reg reg);
+		void sra_reg8(Reg reg);
+		void srl_reg8(Reg reg);
+		void swap_reg8(Reg reg);
+		void bit_reg8(uint8_t bit, Reg reg);
+		void res_reg8(uint8_t bit, Reg reg);
+		void set_reg8(uint8_t bit, Reg reg);
 		void inc_reg16(int opcode);
+		void rlc_reg8(Reg reg);
+		void rrc_reg8(Reg reg);
 		void rlca();
 		void ld_u16_sp();
+		void rl_reg8(Reg reg);
+		void rr_reg8(Reg reg);
 		void ld_reg_reg(uint8_t opcode);
 		void add_a_reg(uint8_t opcode);
 		void adc_a_reg(uint8_t opcode);

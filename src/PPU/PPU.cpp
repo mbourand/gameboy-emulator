@@ -114,22 +114,22 @@ namespace gbmu
 		uint8_t ly = this->_memory.readByte(0xFF44);
 		if (ly < 0 || ly > 143)
 			return;
-		uint8_t scy = this->_memory.readByte(0xFF42);
-		uint8_t scx = this->_memory.readByte(0xFF43);
+		// uint8_t scy = this->_memory.readByte(0xFF42);
+		// uint8_t scx = this->_memory.readByte(0xFF43);
 
 		uint8_t bgPalette = this->_memory.readByte(0xFF47);
 
 		uint8_t lcdc = this->_memory.readByte(0xFF40);
 
-		uint16_t bgTileMap = (lcdc & LCDC::BgTileMapArea) ? 0x9800 : 0x9C00;
+		uint16_t bgTileMap = (lcdc & LCDC::BgTileMapArea) ? 0x9C00 : 0x9800;
 		uint16_t tileData = (lcdc & LCDC::BgWinTileDataArea) ? 0x8000 : 0x9000;
 
-		uint8_t yPos = scy + ly;
+		uint8_t yPos = /*scy +*/ ly;
 		uint8_t tileRowInMap = yPos / 8;
 
 		for (uint8_t x = 0; x < 160; x++)
 		{
-			uint8_t xPos = scx + x;
+			uint8_t xPos = /*scx +*/ x;
 			uint8_t tileColInMap = xPos / 8;
 
 			uint16_t tileAddressInMap = bgTileMap + tileRowInMap * 32 + tileColInMap;
@@ -143,7 +143,7 @@ namespace gbmu
 			if (lcdc & LCDC::BgWinTileDataArea)
 				tileAddressInData += tileOffsetInData * 16;
 			else
-				tileAddressInData += (tileOffsetInData + 128) * 16;
+				tileAddressInData += static_cast<int8_t>(tileOffsetInData + 128) * 16;
 
 			uint8_t tileRow = (yPos % 8);
 			uint8_t tileCol = (xPos % 8);
