@@ -80,6 +80,18 @@ namespace gbmu
 	protected:
 		void _request_interrupt(Interrupt interrupt);
 
+		void rlc_hl();
+		void rrc_hl();
+		void rl_hl();
+		void rr_hl();
+		void sla_hl();
+		void sra_hl();
+		void srl_hl();
+		void swap_hl();
+		void bit_hl(uint8_t bit);
+		void res_hl(uint8_t bit);
+		void set_hl(uint8_t bit);
+
 		void nop();
 		void inc_sp();
 		void dec_sp();

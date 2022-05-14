@@ -220,20 +220,36 @@ namespace gbmu
 			// http://jgmalcolm.com/z80/advanced/shif#sla
 			case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07: // RLC reg8
 				this->rlc_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x06: // RLC (HL)
+				this->rlc_hl(); break;
 			case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0F: // RRC reg8
 				this->rrc_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x0E: // RRC (HL)
+				this->rrc_hl(); break;
 			case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: // RL reg8
 				this->rl_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x16: // RL (HL)
+				this->rl_hl(); break;
 			case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1F: // RR reg8
 				this->rr_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x1E: // RR (HL)
+				this->rr_hl(); break;
 			case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27: // SLA reg8
 				this->sla_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x26: // SLA (HL)
+				this->sla_hl(); break;
 			case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2F: // SRA reg8
 				this->sra_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x2E: // SRA (HL)
+				this->sra_hl(); break;
 			case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37: // SEAP reg8
 				this->swap_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x36: // SWAP (HL)
+				this->swap_hl(); break;
 			case 0x38: case 0x39: case 0x3A: case 0x3B: case 0x3C: case 0x3D: case 0x3F: // SRL reg8
 				this->srl_reg8(static_cast<Reg>(opcode & 0b111)); break;
+			case 0x3E: // SRL (HL)
+				this->srl_hl(); break;
 			case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47: // BIT 0, reg8
 			case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4F: // BIT 1, reg8
 			case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57: // BIT 2, reg8
@@ -243,6 +259,8 @@ namespace gbmu
 			case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77: // BIT 6, reg8
 			case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7F: // BIT 7, reg8
 				this->bit_reg8((opcode - 0x40) / 8, static_cast<Reg>(opcode & 0b111)); break;
+			case 0x46: case 0x4E: case 0x56: case 0x5E: case 0x66: case 0x6E: case 0x76: case 0x7E: // BIT n, (HL)
+				this->bit_hl((opcode - 0x46) / 8); break;
 			case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87: // RES 0, reg8
 			case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8F: // RES 1, reg8
 			case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97: // RES 2, reg8
@@ -252,6 +270,8 @@ namespace gbmu
 			case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB7: // RES 6, reg8
 			case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBF: // RES 7, reg8
 				this->res_reg8((opcode - 0x80) / 8, static_cast<Reg>(opcode & 0b111)); break;
+			case 0x86: case 0x8E: case 0x96: case 0x9E: case 0xA6: case 0xAE: case 0xB6: case 0xBE: // RES n, (HL)
+				this->res_hl((opcode - 0x86) / 8); break;
 			case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC7: // SET 0, reg8
 			case 0xC8: case 0xC9: case 0xCA: case 0xCB: case 0xCC: case 0xCD: case 0xCF: // SET 1, reg8
 			case 0xD0: case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD5: case 0xD7: // SET 2, reg8
@@ -261,6 +281,8 @@ namespace gbmu
 			case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4: case 0xF5: case 0xF7: // SET 6, reg8
 			case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD: case 0xFF: // SET 7, reg8
 				this->set_reg8((opcode - 0xC0) / 8, static_cast<Reg>(opcode & 0b111)); break;
+			case 0xC6: case 0xCE: case 0xD6: case 0xDE: case 0xE6: case 0xEE: case 0xF6: case 0xFE: // SET n, (HL)
+				this->set_hl((opcode - 0xC6) / 8); break;
 		}
 		/* clang-format on */
 	}
@@ -902,10 +924,9 @@ namespace gbmu
 	{
 		uint16_t addr = opcode - 0xC7;
 		this->sp -= 2;
-		this->_memory.writeWord(this->sp, this->pc);
+		this->_memory.writeWord(this->sp, this->pc + 1);
 		this->pc = addr;
 		this->_cycleTimer += 16;
-		this->pc++;
 	}
 
 	void CPU::add_a_u8()
@@ -1138,22 +1159,22 @@ namespace gbmu
 		bool carry = this->isFlagSet(FLAG_CARRY);
 		bool halfCarry = this->isFlagSet(FLAG_HALF_CARRY);
 		bool negative = this->isFlagSet(FLAG_NEGATIVE);
+
 		int correction = 0;
 		uint8_t setCarry = 0;
 
 		if (halfCarry || (!negative && (this->registers[Reg::A] & 0xF) > 9))
 			correction |= 0x06;
-		if (carry || (this->registers[Reg::A] > 0x99))
+		if (carry || (!negative && this->registers[Reg::A] > 0x99))
 		{
 			correction |= 0x60;
 			setCarry = FLAG_CARRY;
 		}
 
-		uint16_t res = static_cast<uint16_t>(this->registers[Reg::A]) + (negative ? -correction : correction);
-		this->registers[Reg::A] = static_cast<uint8_t>(res);
+		this->registers[Reg::A] = this->registers[Reg::A] + (negative ? -correction : correction);
 
-		uint8_t setZero = (res & 0xFF) == 0 ? FLAG_ZERO : 0;
-		this->registers[Reg::F] = this->getFlag(FLAG_NEGATIVE) | setZero | setCarry;
+		this->registers[Reg::F] =
+			this->getFlag(FLAG_NEGATIVE) | (this->registers[Reg::A] == 0 ? FLAG_ZERO : 0) | setCarry;
 
 		this->pc++;
 		this->_cycleTimer += 4;
@@ -1161,14 +1182,14 @@ namespace gbmu
 
 	void CPU::halt()
 	{
-		// this->halted = true;
+		this->halted = true;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
 
 	void CPU::stop()
 	{
-		// this->stopped = true;
+		this->stopped = true;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
@@ -1189,4 +1210,122 @@ namespace gbmu
 		   << cpu._ticks;
 		return os;
 	}
+
+	void CPU::rlc_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, (val << 1) | (val >> 7));
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::rrc_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, (val >> 1) | (val << 7));
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::rl_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		bool carry = this->isFlagSet(FLAG_CARRY);
+		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, (val << 1) | carry);
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::rr_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		bool carry = this->isFlagSet(FLAG_CARRY);
+		this->registers[Reg::F] = (val & 0x1) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, (val >> 1) | (carry << 7));
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::sla_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, val << 1);
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::sra_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, (val >> 1) | (val & 0x80));
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::srl_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
+		this->_memory.writeByte(addr, val >> 1);
+		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::swap_hl()
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->_memory.writeByte(addr, (val >> 4) | (val << 4));
+		this->registers[Reg::F] = (this->_memory.readByte(addr) == 0 ? FLAG_ZERO : 0);
+		this->pc++;
+		this->_cycleTimer += 12;
+	}
+
+	void CPU::bit_hl(uint8_t bit)
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->registers[Reg::F] =
+			((val & (1 << bit)) == 0 ? FLAG_ZERO : 0) | FLAG_HALF_CARRY | this->getFlag(FLAG_CARRY);
+		this->pc++;
+		this->_cycleTimer += 8;
+	}
+
+	void CPU::res_hl(uint8_t bit)
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->_memory.writeByte(addr, val & ~(1 << bit));
+		this->pc++;
+		this->_cycleTimer += 8;
+	}
+
+	void CPU::set_hl(uint8_t bit)
+	{
+		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
+		uint8_t val = this->_memory.readByte(addr);
+		this->_memory.writeByte(addr, val | (1 << bit));
+		this->pc++;
+		this->_cycleTimer += 8;
+	}
+
 }

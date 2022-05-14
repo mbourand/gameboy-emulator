@@ -57,8 +57,8 @@ if len(sys.argv) != 3:
 seenStates = []
 createTest = False
 
-start = 1130000
-end = 1160000
+start = 0
+end = 150000
 
 with open(sys.argv[2]) as real:
 	for i, line in enumerate(real):
@@ -79,7 +79,7 @@ with open(sys.argv[2]) as real:
 			if state.pc in bannedPcs:
 				continue
 
-			if not "pop " in line and not "ldh [" in line and not "ldh a, [" in line and not state in [seenState.start for seenState in seenStates]:
+			if ("jp" in line or "jr" in line or "rst" in line) and not state in [seenState.start for seenState in seenStates]:
 				seenStates.append(GbStateTest(state, None))
 				createTest = True
 		if i >= end:

@@ -100,13 +100,13 @@ namespace gbmu
 		lcdStatus = (lcdStatus & 0b11111000) | mode | ((ly == lyc) << 2);
 		this->_memory.writeByte(0xFF41, lcdStatus);
 		if (ly == lyc && (lcdStatus & interruptsToCheck & LCDStatus::LycLyCoincidenceInt))
-			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+			this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) | Interrupt::LCDStat);
 		if (mode == LCDStatus::VBlankMode && (lcdStatus & interruptsToCheck & LCDStatus::VBlankInt))
-			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+			this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) | Interrupt::LCDStat);
 		if (mode == LCDStatus::HBlankMode && (lcdStatus & interruptsToCheck & LCDStatus::HBlankInt))
-			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+			this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) | Interrupt::LCDStat);
 		if (mode == LCDStatus::OAMSearchMode && (lcdStatus & interruptsToCheck & LCDStatus::OAMSearchInt))
-			this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::LCDStat);
+			this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) | Interrupt::LCDStat);
 	}
 
 	void PPU::_pixelTransfer()
