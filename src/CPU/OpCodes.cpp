@@ -442,8 +442,9 @@ namespace gbmu
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->registers[opcode & 0b111];
 		this->registers[Reg::A] += src;
-		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
-								  (dest + src > 0xFF ? FLAG_CARRY : 0) | (dest + src == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
+								  (static_cast<uint16_t>(dest) + src > 0xFF ? FLAG_CARRY : 0) |
+								  (dest + src == 0 ? FLAG_ZERO : 0);
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
@@ -452,8 +453,9 @@ namespace gbmu
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::A] += src;
-		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
-								  (dest + src > 0xFF ? FLAG_CARRY : 0) | (dest + src == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
+								  (static_cast<uint16_t>(dest) + src > 0xFF ? FLAG_CARRY : 0) |
+								  (dest + src == 0 ? FLAG_ZERO : 0);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -489,10 +491,11 @@ namespace gbmu
 	void CPU::adc_a_hl()
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
-		this->registers[Reg::A] += src + this->isFlagSet(FLAG_CARRY);
-		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
-								  (dest + src + this->isFlagSet(FLAG_CARRY) > 0xFF ? FLAG_CARRY : 0) |
-								  (this->registers[Reg::A] == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::A] = this->registers[Reg::A] + src + this->isFlagSet(FLAG_CARRY);
+		this->registers[Reg::F] =
+			((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
+			(static_cast<uint16_t>(dest) + src + this->isFlagSet(FLAG_CARRY) > 0xFF ? FLAG_CARRY : 0) |
+			(this->registers[Reg::A] == 0 ? FLAG_ZERO : 0);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -500,11 +503,11 @@ namespace gbmu
 	void CPU::sbc_a_hl()
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		this->registers[Reg::A] = this->registers[Reg::A] - src - this->isFlagSet(FLAG_CARRY);
 		this->registers[Reg::F] =
 			FLAG_NEGATIVE | (dest == src + this->isFlagSet(FLAG_CARRY) ? FLAG_ZERO : 0) |
 			((dest & 0xF) - (src + this->isFlagSet(FLAG_CARRY) & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
 			(dest < src + this->isFlagSet(FLAG_CARRY) ? FLAG_CARRY : 0);
-		this->registers[Reg::A] -= src + ((this->registers[Reg::F] & FLAG_CARRY) > 0);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -633,25 +636,26 @@ namespace gbmu
 
 	void CPU::dec_reg(int opcode)
 	{
-		int fourth_bit = this->registers[opcode + 0x40 >> 3 & 0b111] & (1 << 4);
-		this->registers[opcode + 0x40 >> 3 & 0b111]--;
-		int fourth_bit_after = this->registers[opcode + 0x40 >> 3 & 0b111] & (1 << 4);
-
-		this->registers[Reg::F] = (this->registers[opcode + 0x40 >> 3 & 0b111] == 0 ? FLAG_ZERO : 0) | FLAG_NEGATIVE |
-								  this->isFlagSet(FLAG_CARRY) | (fourth_bit != fourth_bit_after ? FLAG_HALF_CARRY : 0);
-		;
+		Reg reg = static_cast<Reg>((opcode - 0x5) / 8);
+		uint8_t upperNibbleBefore = (this->registers[reg] >> 4);
+		this->registers[reg]--;
+		uint8_t upperNibbleAfter = (this->registers[reg] >> 4);
+		this->registers[Reg::F] = (this->registers[reg] == 0 ? FLAG_ZERO : 0) | FLAG_NEGATIVE |
+								  this->isFlagSet(FLAG_CARRY) |
+								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0);
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
 
 	void CPU::inc_reg(int opcode)
 	{
-		int fourth_bit = this->registers[opcode + 0x40 >> 3 & 0b111] & (1 << 4);
-		this->registers[opcode + 0x40 >> 3 & 0b111]++;
-		int fourth_bit_after = this->registers[opcode + 0x40 >> 3 & 0b111] & (1 << 4);
+		Reg reg = static_cast<Reg>((opcode - 0x4) / 8);
+		uint8_t upperNibbleBefore = (this->registers[reg] >> 4);
+		this->registers[reg]++;
+		uint8_t upperNibbleAfter = (this->registers[reg] >> 4);
 
-		this->registers[Reg::F] = (this->registers[opcode + 0x40 >> 3 & 0b111] == 0 ? FLAG_ZERO : 0) |
-								  this->isFlagSet(FLAG_CARRY) | (fourth_bit != fourth_bit_after ? FLAG_HALF_CARRY : 0);
+		this->registers[Reg::F] = (this->registers[reg] == 0 ? FLAG_ZERO : 0) | this->isFlagSet(FLAG_CARRY) |
+								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0);
 		;
 		this->pc++;
 		this->_cycleTimer += 4;
@@ -845,7 +849,7 @@ namespace gbmu
 
 	void CPU::jp_hl()
 	{
-		this->pc = this->readRegister16(Reg::H, Reg::L) + 1;
+		this->pc = this->readRegister16(Reg::H, Reg::L);
 		this->_cycleTimer += 4;
 	}
 
@@ -878,8 +882,9 @@ namespace gbmu
 	{
 		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
 		this->registers[Reg::A] += src;
-		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
-								  (dest + src > 0xFF ? FLAG_CARRY : 0) | (dest + src == 0 ? FLAG_ZERO : 0);
+		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
+								  (static_cast<uint16_t>(dest) + src > 0xFF ? FLAG_CARRY : 0) |
+								  (dest + src == 0 ? FLAG_ZERO : 0);
 		this->pc += 2;
 		this->_cycleTimer += 8;
 	}
@@ -952,9 +957,12 @@ namespace gbmu
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
 		uint8_t val = this->_memory.readByte(addr);
-		this->registers[Reg::F] =
-			(val == 0xFF ? FLAG_ZERO : 0) | ((val & 0xF) == 0xF ? FLAG_HALF_CARRY : 0) | this->isFlagSet(FLAG_CARRY);
+		uint8_t upperNibbleBefore = (val >> 4);
 		this->_memory.writeByte(addr, val + 1);
+		uint8_t upperNibbleAfter = (val >> 4);
+		this->registers[Reg::F] = (val == 0 ? FLAG_ZERO : 0) |
+								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0) |
+								  this->isFlagSet(FLAG_CARRY);
 		this->pc += 1;
 		this->_cycleTimer += 12;
 	}
@@ -963,9 +971,12 @@ namespace gbmu
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
 		uint8_t val = this->_memory.readByte(addr);
-		this->registers[Reg::F] = (val == 1 ? FLAG_ZERO : 0) | ((val & 0x1F) == 0x10 ? FLAG_HALF_CARRY : 0) |
+		uint8_t upperNibbleBefore = (val >> 4);
+		this->_memory.writeByte(addr, val - 1);
+		uint8_t upperNibbleAfter = (val >> 4);
+		this->registers[Reg::F] = (val == 0 ? FLAG_ZERO : 0) |
+								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0) |
 								  this->isFlagSet(FLAG_CARRY) | FLAG_NEGATIVE;
-		this->_memory.writeByte(addr, val + 1);
 		this->pc += 1;
 		this->_cycleTimer += 12;
 	}
@@ -1099,12 +1110,17 @@ namespace gbmu
 
 	void CPU::halt()
 	{
-		this->halted = true;
+		// this->halted = true;
 		this->pc++;
 		this->_cycleTimer += 4;
 	}
 
-	void CPU::stop() {}
+	void CPU::stop()
+	{
+		// this->stopped = true;
+		this->pc++;
+		this->_cycleTimer += 4;
+	}
 
 	std::ostream& operator<<(std::ostream& os, const CPU& cpu)
 	{

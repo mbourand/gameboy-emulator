@@ -58,6 +58,7 @@ namespace gbmu
 		uint16_t pc; // Program counter
 
 		bool halted;
+		bool stopped;
 		bool ime; // Interrupt master enable
 
 		CPU() = default;

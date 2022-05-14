@@ -54,7 +54,7 @@ int main(int argc, char** argv)
 				window.close();
 		}
 
-		if (cyc < gbmu::CPU::CPU_FREQUENCY / 60)
+		if (cyc < gbmu::CPU::CPU_FREQUENCY / 59.7)
 		{
 			cpu.update_timers();
 			if (cpu._cycleTimer == 0)
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 			cyc++;
 		}
 
-		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 60.f)
+		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 59.7f)
 		{
 			// std::cout << cyc << std::endl;
 			cyc = 0;

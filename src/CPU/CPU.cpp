@@ -5,7 +5,7 @@ namespace gbmu
 	CPU::CPU(Memory& memory)
 		: _memory(memory), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0),
 		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0)), halted(false), ime(false), _ticks(0),
-		  _divLastInc(0), _timaLastInc(0), _ei_next_instruction(false)
+		  _divLastInc(0), _timaLastInc(0), _ei_next_instruction(false), stopped(false)
 	{
 		this->registers[Register::A] = 0x01;
 		this->registers[Register::F] = 0xB0;
@@ -58,11 +58,13 @@ namespace gbmu
 			return;
 		}
 
-		if (this->ime)
+		for (uint8_t bit = 0; bit < 5; ++bit)
 		{
-			for (uint8_t bit = 0; bit < 5; ++bit)
+			if ((this->_memory.readByte(0xFF0F) & (1 << bit)) && (this->_memory.readByte(0xFFFF) & (1 << bit)))
 			{
-				if ((this->_memory.readByte(0xFF0F) & (1 << bit)) && (this->_memory.readByte(0xFFFF) & (1 << bit)))
+				this->stopped = false;
+				this->halted = false;
+				if (this->ime)
 				{
 					this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) & ~(1 << bit));
 					this->ime = false;
@@ -81,7 +83,7 @@ namespace gbmu
 			this->ime = true;
 		}
 
-		if (!this->halted)
+		if (!this->halted && !this->stopped)
 		{
 			uint8_t opcode = this->_memory.readByte(this->pc);
 			if (opcode == 0xCB) // PREFIX CB
