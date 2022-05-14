@@ -41,7 +41,6 @@ int main(int argc, char** argv)
 
 	std::ofstream logFile("../../log.txt");
 
-	std::vector<int> ops;
 	sf::Event event;
 
 	int cyc = 0;
@@ -57,14 +56,8 @@ int main(int argc, char** argv)
 		if (cyc < gbmu::CPU::CPU_FREQUENCY / 59.7)
 		{
 			cpu.update_timers();
-			if (cpu._cycleTimer == 0)
-				logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
-			uint8_t op = memory.readByte(cpu.pc);
-			if (std::find(ops.begin(), ops.end(), op) == ops.end())
-			{
-				std::cout << (int)op << std::endl;
-				ops.push_back(op);
-			}
+			/*if (cpu._cycleTimer == 0)
+				logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;*/
 			cpu.tick();
 			ppu.tick();
 			cyc++;

@@ -70,6 +70,7 @@ namespace gbmu
 		uint16_t readRegister16(Register high, Register low);
 
 		bool isFlagSet(uint8_t flag);
+		uint8_t getFlag(uint8_t flag);
 
 		void tick();
 		void update_timers();
@@ -80,6 +81,8 @@ namespace gbmu
 		void _request_interrupt(Interrupt interrupt);
 
 		void nop();
+		void inc_sp();
+		void dec_sp();
 		void sla_reg8(Reg reg);
 		void sra_reg8(Reg reg);
 		void srl_reg8(Reg reg);

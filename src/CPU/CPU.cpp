@@ -51,6 +51,8 @@ namespace gbmu
 
 	void CPU::tick()
 	{
+		this->_memory.writeByte(0xFF00, (this->_memory.readByte(0xFF00) & 0b00110000) + 0b11001111);
+
 		if (this->_cycleTimer > 0)
 		{
 			this->_ticks++;
@@ -150,5 +152,8 @@ namespace gbmu
 		this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | interrupt);
 	}
 
-	bool CPU::isFlagSet(uint8_t flag) { return (this->registers[static_cast<uint8_t>(Register::F)] & flag) != 0; }
+	bool CPU::isFlagSet(uint8_t flag) { return (this->registers[static_cast<uint8_t>(Reg::F)] & flag) != 0; }
+
+	uint8_t CPU::getFlag(uint8_t flag) { return this->registers[static_cast<uint8_t>(Reg::F)] & flag; }
+
 }

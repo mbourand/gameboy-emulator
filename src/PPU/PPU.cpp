@@ -122,17 +122,6 @@ namespace gbmu
 		uint8_t lcdc = this->_memory.readByte(0xFF40);
 
 		uint16_t bgTileMap = (lcdc & LCDC::BgTileMapArea) ? 0x9C00 : 0x9800;
-
-		/*for (int i = 0; i < 1024; i++)
-		{
-			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)this->_memory.readByte(bgTileMap + i)
-					  << " ";
-			if (i % 32 == 31)
-				std::cout << std::endl;
-		}
-		std::cout << std::endl;
-		std::cout << std::endl;*/
-
 		uint16_t tileData = (lcdc & LCDC::BgWinTileDataArea) ? 0x8000 : 0x9000;
 
 		uint8_t yPos = scy + ly;

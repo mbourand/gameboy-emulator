@@ -13,12 +13,7 @@ namespace gbmu
 
 	uint8_t Memory::readByte(uint16_t address) { return this->_bytes[address]; }
 
-	void Memory::writeByte(uint16_t address, uint8_t value)
-	{
-		if (address >> 8 == 0xD6)
-			std::cout << "Writing to ROM: " << std::hex << address << " = " << (int)value << std::endl;
-		this->_bytes[address] = value;
-	}
+	void Memory::writeByte(uint16_t address, uint8_t value) { this->_bytes[address] = value; }
 
 	uint16_t Memory::readWord(uint16_t address) { return (this->_bytes[address + 1] << 8) | this->_bytes[address]; }
 

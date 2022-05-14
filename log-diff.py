@@ -56,10 +56,14 @@ if len(sys.argv) != 3:
 
 seenStates = []
 createTest = False
+
+start = 1130000
+end = 1160000
+
 with open(sys.argv[2]) as real:
 	for i, line in enumerate(real):
 		line = line.strip()
-		if i > 30000 and i < 40000:
+		if i > start and i < end:
 			if i % 1000 == 0:
 				print(i)
 			if line.startswith('LR35902'):
@@ -71,14 +75,14 @@ with open(sys.argv[2]) as real:
 				seenStates[-1].end = state
 				createTest = False
 
-			bannedPcs = [ 0x743 ]
+			bannedPcs = [ ]
 			if state.pc in bannedPcs:
 				continue
 
-			if not state in [seenState.start for seenState in seenStates]:
+			if not "pop " in line and not "ldh [" in line and not "ldh a, [" in line and not state in [seenState.start for seenState in seenStates]:
 				seenStates.append(GbStateTest(state, None))
 				createTest = True
-		if i >= 40000:
+		if i >= end:
 			break
 if seenStates[-1].end is None:
 	seenStates.pop()
@@ -88,10 +92,11 @@ checkResult = False
 checkResultTest = GbStateTest(None, None)
 
 starts = [seenState.start for seenState in seenStates]
+print(f"State amount: {len(starts)}")
 with open(sys.argv[1]) as me:
-	i = 0
-	for line in me:
-		i += 1
+	for i, line in enumerate(me):
+		if i < start - 10000:
+			continue
 		if i % 1000 == 0:
 			print(i)
 		line = line.strip()
@@ -105,9 +110,9 @@ with open(sys.argv[1]) as me:
 				print(f"Error found line {i}:\nMe:\n" + str(checkResultTest) + "\nReal:\n" + str([seenState for seenState in seenStates if seenState.start == checkResultTest.start][0]) + "\n")
 				sys.exit(1)
 			else:
+				starts.remove(checkResultTest.start)
 				seenStates.remove(checkResultTest)
 
 		if state in starts:
 			checkResult = True
 			checkResultTest = GbStateTest(state, None)
-
