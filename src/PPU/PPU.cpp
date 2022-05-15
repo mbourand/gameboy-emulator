@@ -3,10 +3,14 @@
 
 namespace gbmu
 {
-	PPU::PPU(Memory& memory) : _memory(memory), _state(State::OAMSearch), _ticks(0)
+	PPU::PPU(Memory& memory) : _memory(memory), _state(State::OAMSearch), _ticks(0), _lcdWasDisabled(false)
 	{
 		this->_lcdPixels.create(160, 144);
 		this->_finishedLcdPixels.create(160, 144);
+		this->_blankLcdPixels.create(160, 144);
+		for (int x = 0; x < this->_blankLcdPixels.getSize().x; x++)
+			for (int y = 0; y < this->_blankLcdPixels.getSize().y; y++)
+				this->_blankLcdPixels.setPixel(x, y, sf::Color::White);
 
 		this->_gbColors[0] = sf::Color::White;
 		this->_gbColors[1] = sf::Color::Color(255 * 2 / 3, 255 * 2 / 3, 255 * 2 / 3);
@@ -23,8 +27,10 @@ namespace gbmu
 			this->_ticks = 0;
 			this->_memory.writeByte(0xFF44, 0);
 			this->_updateLCDStatus(0x0);
+			this->_lcdWasDisabled = true;
 			return;
 		}
+
 		auto entryState = this->_state;
 		switch (this->_state)
 		{
@@ -52,7 +58,13 @@ namespace gbmu
 						this->_state = State::VBlank;
 						this->_updateLCDStatus(LCDStatus::VBlankInt | LCDStatus::LycLyCoincidenceInt);
 						this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::VBlank);
-						this->_finishedLcdPixels = this->_lcdPixels;
+						if (this->_lcdWasDisabled)
+						{
+							this->_finishedLcdPixels = this->_blankLcdPixels;
+							this->_lcdWasDisabled = false;
+						}
+						else
+							this->_finishedLcdPixels = this->_lcdPixels;
 					}
 					else
 					{
@@ -134,18 +146,13 @@ namespace gbmu
 			uint8_t tileColInMap = xPos / 8;
 
 			uint16_t tileAddressInMap = bgTileMap + tileRowInMap * 32 + tileColInMap;
-			int16_t tileOffsetInData = 0;
-
-			if (lcdc & LCDC::BgWinTileDataArea)
-				tileOffsetInData = static_cast<int8_t>(this->_memory.readByte(tileAddressInMap));
-			else
-				tileOffsetInData = this->_memory.readByte(tileAddressInMap);
+			int16_t tileOffsetInData = this->_memory.readByte(tileAddressInMap);
 
 			uint16_t tileAddressInData = tileData;
-			if (lcdc & LCDC::BgWinTileDataArea)
+			if (tileData == 0x8000)
 				tileAddressInData += tileOffsetInData * 16;
 			else
-				tileAddressInData += static_cast<int8_t>(tileOffsetInData + 128) * 16;
+				tileAddressInData += 0x800 + (static_cast<int8_t>(tileOffsetInData) * 16);
 
 			uint8_t tileRow = (yPos % 8);
 			uint8_t tileCol = (xPos % 8);
@@ -153,7 +160,7 @@ namespace gbmu
 			uint8_t tileDataLow = this->_memory.readByte(tileAddressInData + tileRow * 2);
 			uint8_t tileDataHigh = this->_memory.readByte(tileAddressInData + tileRow * 2 + 1);
 
-			uint8_t colorId = (((tileDataLow >> (7 - tileCol)) & 1) << 1) | ((tileDataHigh >> (7 - tileCol)) & 1);
+			uint8_t colorId = (((tileDataHigh >> (7 - tileCol)) & 1) << 1) | ((tileDataLow >> (7 - tileCol)) & 1);
 
 			sf::Color color = this->getPaletteColor(colorId);
 			this->_lcdPixels.setPixel(x, ly, color);

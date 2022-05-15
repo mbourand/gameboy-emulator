@@ -50,7 +50,9 @@ namespace gbmu
 		uint32_t _ticks;
 		std::array<sf::Color, 4> _gbColors;
 
-		sf::Image _lcdPixels, _finishedLcdPixels;
+		sf::Image _lcdPixels, _finishedLcdPixels, _blankLcdPixels;
+
+		bool _lcdWasDisabled;
 
 	public:
 		PPU(Memory& memory);

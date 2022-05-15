@@ -59,6 +59,10 @@ int main(int argc, char** argv)
 			cpu.update_timers();
 			cyc += cpu.tick();
 			ppu.tick();
+			/*			if (cpu.registers[gbmu::CPU::Reg::B] == 3 && cpu.registers[gbmu::CPU::Reg::C] == 5 &&
+							cpu.registers[gbmu::CPU::Reg::D] == 8 && cpu.registers[gbmu::CPU::Reg::E] == 13 &&
+							cpu.registers[gbmu::CPU::Reg::H] == 21 && cpu.registers[gbmu::CPU::Reg::L] == 34)
+							std::cout << "OK" << std::endl;*/
 		}
 
 		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 59.7f)
