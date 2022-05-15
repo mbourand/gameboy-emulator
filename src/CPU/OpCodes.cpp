@@ -1207,7 +1207,7 @@ namespace gbmu
 		   << "H:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::H]) << " "
 		   << "L:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::L]) << " "
 		   << "SP:" << std::setw(4) << std::setfill('0') << static_cast<uint16_t>(cpu.sp) << "  CY:" << std::dec
-		   << cpu._ticks;
+		   << cpu._ticks / 4;
 		return os;
 	}
 

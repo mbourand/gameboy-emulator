@@ -11,11 +11,21 @@ namespace gbmu
 			this->_bytes[Memory::CARTRIDGE_START + i] = cartridge.bytes[i];
 	}
 
-	uint8_t Memory::readByte(uint16_t address) { return this->_bytes[address]; }
+	uint8_t Memory::readByte(uint16_t address)
+	{
+		if (!this->_bytes[0xFF50] && address < BOOT_ROM.size())
+			return BOOT_ROM[address];
+		return this->_bytes[address];
+	}
 
 	void Memory::writeByte(uint16_t address, uint8_t value) { this->_bytes[address] = value; }
 
-	uint16_t Memory::readWord(uint16_t address) { return (this->_bytes[address + 1] << 8) | this->_bytes[address]; }
+	uint16_t Memory::readWord(uint16_t address)
+	{
+		if (!this->_bytes[0xFF50] && address < BOOT_ROM.size())
+			return (BOOT_ROM[address + 1] << 8) | BOOT_ROM[address];
+		return (this->_bytes[address + 1] << 8) | this->_bytes[address];
+	}
 
 	void Memory::writeWord(uint16_t address, uint16_t value)
 	{

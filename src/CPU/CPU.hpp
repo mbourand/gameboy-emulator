@@ -17,13 +17,13 @@ namespace gbmu
 		static constexpr uint8_t FLAG_HALF_CARRY = 0b00100000;
 		static constexpr uint8_t FLAG_CARRY = 0b00010000;
 
-		static constexpr uint16_t ENTRY_POINT = 0x100;
+		static constexpr uint16_t ENTRY_POINT = 0x0000;
 		static constexpr uint16_t ENTRY_STACK_POINTER = 0xFFFE;
 
 		static constexpr uint8_t REGISTER_COUNT = 8;
 
-		static constexpr double CPU_FREQUENCY = (4194304.0 / 4.0);
-		static constexpr uint32_t DIV_FREQUENCY = 16384; // 16384 Hz clock in nanoseconds
+		static constexpr double CPU_FREQUENCY = 4194304.0;
+		static constexpr uint32_t DIV_FREQUENCY = 16384;
 
 		enum Register : uint8_t
 		{
@@ -47,6 +47,7 @@ namespace gbmu
 
 		uint64_t _ticks;
 		uint64_t _divLastInc, _timaLastInc;
+		uint64_t _timaOverflowAt;
 
 	public:
 		int _cycleTimer;
@@ -72,7 +73,7 @@ namespace gbmu
 		bool isFlagSet(uint8_t flag);
 		uint8_t getFlag(uint8_t flag);
 
-		void tick();
+		int tick();
 		void update_timers();
 		void perform_opcode(uint8_t opcode);
 		void perform_opcode_cb(uint8_t opcode);

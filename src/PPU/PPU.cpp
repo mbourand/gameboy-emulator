@@ -51,6 +51,7 @@ namespace gbmu
 					{
 						this->_state = State::VBlank;
 						this->_updateLCDStatus(LCDStatus::VBlankInt | LCDStatus::LycLyCoincidenceInt);
+						this->_memory.writeByte(0xFF0F, this->_memory.readByte(0xFF0F) | Interrupt::VBlank);
 						this->_finishedLcdPixels = this->_lcdPixels;
 					}
 					else
@@ -122,7 +123,7 @@ namespace gbmu
 		uint8_t lcdc = this->_memory.readByte(0xFF40);
 
 		uint16_t bgTileMap = (lcdc & LCDC::BgTileMapArea) ? 0x9C00 : 0x9800;
-		uint16_t tileData = (lcdc & LCDC::BgWinTileDataArea) ? 0x8000 : 0x9000;
+		uint16_t tileData = (lcdc & LCDC::BgWinTileDataArea) ? 0x8000 : 0x8800;
 
 		uint8_t yPos = scy + ly;
 		uint8_t tileRowInMap = yPos / 8;
@@ -133,9 +134,9 @@ namespace gbmu
 			uint8_t tileColInMap = xPos / 8;
 
 			uint16_t tileAddressInMap = bgTileMap + tileRowInMap * 32 + tileColInMap;
-			uint16_t tileOffsetInData = 0;
+			int16_t tileOffsetInData = 0;
 
-			if (lcdc & LCDC::BgTileMapArea)
+			if (lcdc & LCDC::BgWinTileDataArea)
 				tileOffsetInData = static_cast<int8_t>(this->_memory.readByte(tileAddressInMap));
 			else
 				tileOffsetInData = this->_memory.readByte(tileAddressInMap);

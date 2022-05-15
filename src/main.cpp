@@ -55,12 +55,10 @@ int main(int argc, char** argv)
 
 		if (cyc < gbmu::CPU::CPU_FREQUENCY / 59.7)
 		{
+			// logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
 			cpu.update_timers();
-			/*if (cpu._cycleTimer == 0)
-				logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;*/
-			cpu.tick();
+			cyc += cpu.tick();
 			ppu.tick();
-			cyc++;
 		}
 
 		if (framerateClock.getElapsedTime().asMilliseconds() > 1000 / 59.7f)
