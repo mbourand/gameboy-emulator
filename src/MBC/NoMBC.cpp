@@ -6,5 +6,5 @@ namespace gbmu
 	void NoMBC::writeByte(uint16_t address, uint8_t value) {}
 	uint16_t NoMBC::readWord(uint16_t address) const { return 0xFF; }
 	void NoMBC::writeWord(uint16_t address, uint16_t value) {}
-	bool NoMBC::isConcerned(uint16_t address) const { return false; }
+	bool NoMBC::isConcerned(uint16_t address, bool write) const { return false; }
 }

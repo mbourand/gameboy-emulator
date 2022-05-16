@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Cartridge.hpp"
+#include "Joypad.hpp"
 #include "MBC.hpp"
 #include <array>
 #include <memory>
@@ -23,6 +24,7 @@ namespace gbmu
 		static constexpr uint16_t TIMA = 0xFF05;
 		static constexpr uint16_t TMA = 0xFF06;
 		static constexpr uint16_t TAC = 0xFF07;
+		static constexpr uint16_t JOYPAD = 0xFF00;
 
 		static constexpr std::array<uint8_t, 256> BOOT_ROM = {
 			0x31, 0xfe, 0xff, 0xaf, 0x21, 0xff, 0x9f, 0x32, 0xcb, 0x7c, 0x20, 0xfb, 0x21, 0x26, 0xff, 0x0e, 0x11, 0x3e,
@@ -44,6 +46,7 @@ namespace gbmu
 	protected:
 		std::array<uint8_t, MEMORY_SIZE> _bytes;
 		std::unique_ptr<MBC> _mbc;
+		Joypad _joypad;
 
 	public:
 		Memory() = default;
@@ -58,5 +61,9 @@ namespace gbmu
 		void writeWord(uint16_t address, uint16_t value);
 
 		void setDivTimer(uint8_t value);
+		void setJoypad(uint8_t value);
+		uint8_t getJoypad() const;
+
+		void update();
 	};
 }

@@ -51,8 +51,6 @@ namespace gbmu
 
 	int CPU::tick()
 	{
-		this->_memory.writeByte(0xFF00, (this->_memory.readByte(0xFF00) & 0b00110000) | 0b11001111); // IF
-
 		if (this->_timaOverflowAt < this->_ticks)
 		{
 			this->_timaOverflowAt = 0xFFFFFFFFFFFFFFFF;

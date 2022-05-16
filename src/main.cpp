@@ -55,7 +55,8 @@ int main(int argc, char** argv)
 
 		if (cyc < gbmu::CPU::CPU_FREQUENCY / 59.7)
 		{
-			// logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;
+			/*if (memory.readByte(0xFF50) & 0x01)
+				logFile << cpu << " LY:" << std::dec << (int)memory.readByte(0xFF44) << std::endl;*/
 			cpu.update_timers();
 			cyc += cpu.tick();
 			ppu.tick();
@@ -69,6 +70,7 @@ int main(int argc, char** argv)
 		{
 			// std::cout << cyc << std::endl;
 			cyc = 0;
+			memory.update();
 			framerateClock.restart();
 
 			const sf::Image& image = ppu.getImage();
