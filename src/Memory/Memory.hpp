@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Cartridge.hpp"
+#include "MBC.hpp"
 #include <array>
+#include <memory>
 
 namespace gbmu
 {
@@ -12,6 +14,7 @@ namespace gbmu
 
 		static constexpr size_t CARTRIDGE_START = 0x0000;
 		static constexpr size_t CARTRIDGE_END = 0x7FFF;
+		static constexpr size_t CARTRIDGE_MBC_TYPE = 0x147;
 
 		static constexpr uint16_t IF = 0xFF0F;
 		static constexpr uint16_t IE = 0xFFFF;
@@ -40,6 +43,7 @@ namespace gbmu
 
 	protected:
 		std::array<uint8_t, MEMORY_SIZE> _bytes;
+		std::unique_ptr<MBC> _mbc;
 
 	public:
 		Memory() = default;
