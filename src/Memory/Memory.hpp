@@ -65,5 +65,8 @@ namespace gbmu
 		uint8_t getJoypad() const;
 
 		void update();
+
+	protected:
+		void _handleJoypadInterrupt(uint8_t value);
 	};
 }

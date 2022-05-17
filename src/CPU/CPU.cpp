@@ -71,6 +71,8 @@ namespace gbmu
 				if ((this->_memory.readByte(Memory::IF) & (1 << bit)) &&
 					(this->_memory.readByte(Memory::IE) & (1 << bit)))
 				{
+					if (bit == 4)
+						std::cout << "INTERRUPT" << std::endl;
 					this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) & ~(1 << bit));
 					this->ime = false;
 					this->sp -= 2;

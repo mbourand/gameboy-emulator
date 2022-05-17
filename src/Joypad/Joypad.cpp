@@ -31,9 +31,6 @@ namespace gbmu
 		if (checkActions)
 			newJoyp |= (this->_buttonsPressed >> 4);
 
-		/*if ((newJoyp & 0b00001111) != 0b00001111 && (_memory.readByte(Memory::IE) & Interrupt::Joypad))
-			_memory.writeByte(Memory::IF, _memory.readByte(Memory::IF) | Interrupt::Joypad);*/
-
 		return newJoyp;
 	}
 }

@@ -1,6 +1,7 @@
 #include "Memory.hpp"
 #include "MBC1.hpp"
 #include "NoMBC.hpp"
+#include "utils.hpp"
 #include <iostream>
 
 namespace gbmu
@@ -21,7 +22,6 @@ namespace gbmu
 			case 0x01:
 			case 0x02:
 			case 0x03:
-				std::cout << "MBC1" << std::endl;
 				this->_mbc = std::make_unique<MBC1>(cartridge);
 				break;
 			default:
@@ -30,7 +30,11 @@ namespace gbmu
 		}
 	}
 
-	void Memory::update() { this->_joypad.update(); }
+	void Memory::update()
+	{
+		this->_joypad.update();
+		this->_handleJoypadInterrupt(this->getJoypad());
+	}
 
 	uint8_t Memory::readByte(uint16_t address)
 	{
@@ -54,7 +58,10 @@ namespace gbmu
 			if (address == Memory::DIV)
 				value = 0;
 			else if (address == Memory::JOYPAD)
-				value = (this->_bytes[address] & 0b00001111) | (value & 0b00110000);
+			{
+				value = (this->_bytes[Memory::JOYPAD] & 0b00001111) | (value & 0b00110000);
+				this->_handleJoypadInterrupt(value);
+			}
 			this->_bytes[address] = value;
 		}
 	}
@@ -80,7 +87,10 @@ namespace gbmu
 		if (address == Memory::DIV)
 			value = 0;
 		else if (address == Memory::JOYPAD)
+		{
 			value = (this->_bytes[address] & 0b00001111) | (value & 0b00110000);
+			this->_handleJoypadInterrupt(value);
+		}
 		this->_bytes[address + 1] = static_cast<uint8_t>(value >> 8);
 		this->_bytes[address] = static_cast<uint8_t>(value & 0xFF);
 	}
@@ -89,4 +99,18 @@ namespace gbmu
 	void Memory::setJoypad(uint8_t value) { this->_bytes[Memory::JOYPAD] = value; }
 	uint8_t Memory::getJoypad() const { return this->_bytes[Memory::JOYPAD]; }
 
+	void Memory::_handleJoypadInterrupt(uint8_t value)
+	{
+		uint8_t current = this->_bytes[Memory::JOYPAD];
+		uint8_t newJoyp = this->_joypad.getJoypadState(value);
+
+		for (int bit = 0; bit < 4; bit++)
+		{
+			if ((current & (1 << bit)) != 0 && (newJoyp & (1 << bit)) == 0)
+			{
+				this->_bytes[Memory::IF] |= Interrupt::Joypad;
+				break;
+			}
+		}
+	}
 }
