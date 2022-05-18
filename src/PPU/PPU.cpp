@@ -19,6 +19,11 @@ namespace gbmu
 		this->_gbColors[3] = sf::Color::Black;
 	}
 
+	OAMEntry::OAMEntry(uint8_t x, uint8_t y, uint8_t tileIndex, uint8_t flags)
+		: x(x), y(y), tileIndex(tileIndex), flags(flags)
+	{
+	}
+
 	void PPU::tick()
 	{
 		uint8_t lcdc = this->_gb.readByte(0xFF40);
@@ -38,6 +43,7 @@ namespace gbmu
 			case State::OAMSearch:
 				if (this->_ticks == 20)
 				{
+					this->_oamSearch();
 					this->_state = State::PixelTransfer;
 					this->_updateLCDStatus(0x0);
 				}
@@ -96,6 +102,22 @@ namespace gbmu
 			this->_ticks++;
 	}
 
+	void PPU::_oamSearch()
+	{
+		this->_oamEntries.clear();
+		this->_oamEntries.resize(40);
+		uint16_t oamAddress = 0xFE00;
+		for (int i = 0; i < 40; i++)
+		{
+			uint8_t y = this->_gb.readByte(oamAddress);
+			uint8_t x = this->_gb.readByte(oamAddress + 1);
+			uint8_t tileIndex = this->_gb.readByte(oamAddress + 2);
+			uint8_t flags = this->_gb.readByte(oamAddress + 3);
+			this->_oamEntries.push_back(OAMEntry(x, y, tileIndex, flags));
+			oamAddress += 4;
+		}
+	}
+
 	void PPU::_updateLCDStatus(uint8_t interruptsToCheck)
 	{
 		LCDStatus mode;
@@ -133,7 +155,7 @@ namespace gbmu
 		uint8_t wy = this->_gb.readByte(0xFF4A);
 		uint8_t wx = this->_gb.readByte(0xFF4B) - 7;
 
-		bool windowOn = (this->_gb.readByte(0xFF40) & 0b00000100) && wy <= ly;
+		bool windowOn = ((this->_gb.readByte(0xFF40) & 0b00000101) == 0b101) && wy <= ly;
 
 		uint8_t bgPalette = this->_gb.readByte(0xFF47);
 
@@ -148,35 +170,87 @@ namespace gbmu
 
 		for (uint8_t x = 0; x < 160; x++)
 		{
-			uint8_t xPos = windowOn ? x - wx : scx + x;
-			uint8_t tileColInMap = xPos / 8;
+			uint8_t colorDrewByBg = 0;
 
-			uint16_t tileAddressInMap = (windowOn ? winTileMapArea : bgTileMap) + tileRowInMap * 32 + tileColInMap;
-			int16_t tileOffsetInData = this->_gb.readByte(tileAddressInMap);
+			if (lcdc & LCDC::BgWinEnable)
+			{
+				uint8_t xPos = windowOn ? x - wx : scx + x;
+				uint8_t tileColInMap = xPos / 8;
 
-			uint16_t tileAddressInData = tileData;
-			if (tileData == 0x8000)
-				tileAddressInData += tileOffsetInData * 16;
+				uint16_t tileAddressInMap = (windowOn ? winTileMapArea : bgTileMap) + tileRowInMap * 32 + tileColInMap;
+				int16_t tileOffsetInData = this->_gb.readByte(tileAddressInMap);
+
+				uint16_t tileAddressInData = tileData;
+				if (tileData == 0x8000)
+					tileAddressInData += tileOffsetInData * 16;
+				else
+					tileAddressInData += 0x800 + (static_cast<int8_t>(tileOffsetInData) * 16);
+
+				uint8_t tileRow = (yPos % 8);
+				uint8_t tileCol = (xPos % 8);
+
+				uint8_t tileDataLow = this->_gb.readByte(tileAddressInData + tileRow * 2);
+				uint8_t tileDataHigh = this->_gb.readByte(tileAddressInData + tileRow * 2 + 1);
+
+				colorDrewByBg = (((tileDataHigh >> (7 - tileCol)) & 1) << 1) | ((tileDataLow >> (7 - tileCol)) & 1);
+
+				sf::Color color = this->getPaletteColor(colorDrewByBg, this->_gb.readByte(0xFF47), false);
+				this->_lcdPixels.setPixel(x, ly, color);
+			}
 			else
-				tileAddressInData += 0x800 + (static_cast<int8_t>(tileOffsetInData) * 16);
+				this->_lcdPixels.setPixel(x, ly, this->getPaletteColor(0, this->_gb.readByte(0xFF47), false));
 
-			uint8_t tileRow = (yPos % 8);
-			uint8_t tileCol = (xPos % 8);
+			if (lcdc & LCDC::ObjEnable)
+			{
+				uint8_t objSize = (lcdc & LCDC::ObjSize) ? 16 : 8;
+				for (auto& entry : this->_oamEntries)
+				{
+					if ((entry.flags & OAMFlags::BgWinOverOBJ) && colorDrewByBg != 0)
+						continue;
+					uint8_t xPos = entry.x - 1;
+					uint8_t yPos = entry.y - 8 - 1;
+					uint8_t tileIndex = (objSize == 8 ? entry.tileIndex : entry.tileIndex & 0xFE);
 
-			uint8_t tileDataLow = this->_gb.readByte(tileAddressInData + tileRow * 2);
-			uint8_t tileDataHigh = this->_gb.readByte(tileAddressInData + tileRow * 2 + 1);
+					if (yPos >= ly && yPos < ly + objSize && xPos >= x && xPos < x + 8)
+					{
+						bool flipY = entry.flags & OAMFlags::FlipY;
+						bool flipX = entry.flags & OAMFlags::FlipX;
 
-			uint8_t colorId = (((tileDataHigh >> (7 - tileCol)) & 1) << 1) | ((tileDataLow >> (7 - tileCol)) & 1);
+						uint8_t tileRow = (yPos - ly) % objSize;
+						if (!flipY)
+							tileRow = (objSize - 1) - tileRow;
+						uint8_t tileCol = (xPos - x) % 8;
 
-			sf::Color color = this->getPaletteColor(colorId);
-			this->_lcdPixels.setPixel(x, ly, color);
+						if (tileRow >= 8)
+							tileIndex |= 1;
+
+						uint16_t tileAddressInData = 0x8000 + tileIndex * 16;
+
+						uint8_t tileDataLow = this->_gb.readByte(tileAddressInData + tileRow * 2);
+						uint8_t tileDataHigh = this->_gb.readByte(tileAddressInData + tileRow * 2 + 1);
+
+						uint8_t colorId = 0;
+						if (flipX)
+							colorId =
+								(((tileDataHigh >> (7 - tileCol)) & 1) << 1) | ((tileDataLow >> (7 - tileCol)) & 1);
+						else
+							colorId = (((tileDataHigh >> tileCol) & 1) << 1) | ((tileDataLow >> tileCol) & 1);
+
+						uint16_t paletteAddr = (entry.flags & OAMFlags::PaletteNumber) ? 0xFF49 : 0xFF48;
+						sf::Color color = this->getPaletteColor(colorId, this->_gb.readByte(paletteAddr), true);
+						if (color != sf::Color::Transparent)
+							this->_lcdPixels.setPixel(x, ly, color);
+					}
+				}
+			}
 		}
 	}
 
-	sf::Color PPU::getPaletteColor(uint8_t index) const
+	sf::Color PPU::getPaletteColor(uint8_t index, uint8_t palette, bool transparency) const
 	{
-		uint8_t paletteColor = this->_gb.readByte(0xFF47);
-		uint8_t colorId = (paletteColor >> (2 * index)) & 0b11;
+		if (transparency && index == 0)
+			return sf::Color::Transparent;
+		uint8_t colorId = (palette >> (2 * index)) & 0b11;
 		return this->_gbColors[colorId];
 	}
 

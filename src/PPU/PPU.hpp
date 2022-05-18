@@ -9,6 +9,28 @@ namespace gbmu
 {
 	class Gameboy;
 
+	enum OAMFlags
+	{
+		BgWinOverOBJ = 0b10000000,
+		FlipY = 0b01000000,
+		FlipX = 0b00100000,
+		PaletteNumber = 0b00010000,
+	};
+
+	class OAMEntry
+	{
+	public:
+		OAMEntry() = default;
+		OAMEntry(const OAMEntry& other) = default;
+		OAMEntry& operator=(const OAMEntry& other) = default;
+		OAMEntry(uint8_t x, uint8_t y, uint8_t tileIndex, uint8_t flags);
+
+		uint8_t x;
+		uint8_t y;
+		uint8_t tileIndex;
+		uint8_t flags;
+	};
+
 	class PPU
 	{
 	public:
@@ -51,6 +73,7 @@ namespace gbmu
 		State _state;
 		uint32_t _ticks;
 		std::array<sf::Color, 4> _gbColors;
+		std::vector<OAMEntry> _oamEntries;
 
 		sf::Image _lcdPixels, _finishedLcdPixels, _blankLcdPixels;
 
@@ -65,9 +88,10 @@ namespace gbmu
 
 		const sf::Image& getImage() const;
 
-		sf::Color getPaletteColor(uint8_t index) const;
+		sf::Color getPaletteColor(uint8_t index, uint8_t palette, bool transparency) const;
 
 	protected:
+		void _oamSearch();
 		void _pixelTransfer();
 		void _updateLCDStatus(uint8_t interruptsToCheck);
 	};

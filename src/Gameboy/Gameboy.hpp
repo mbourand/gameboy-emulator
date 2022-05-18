@@ -36,6 +36,8 @@ namespace gbmu
 		bool _isRunning;
 		Controller _joypad;
 
+		int _dmaTransferCyclesTimer;
+
 	public:
 		Gameboy(Cartridge& cartridge);
 
@@ -45,6 +47,8 @@ namespace gbmu
 		void writeWord(uint16_t address, uint16_t value);
 
 		void setDivTimer(uint16_t value);
+
+		void dmaTransfer(uint8_t value);
 
 		void run();
 	};
