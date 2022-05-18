@@ -1,4 +1,5 @@
 #include "CPU.hpp"
+#include "Gameboy.hpp"
 
 namespace gbmu
 {
@@ -392,7 +393,7 @@ namespace gbmu
 	{
 		Reg high = static_cast<Reg>((opcode >> 4 & 0b11) * 2);
 		Reg low = static_cast<Reg>(high + 1);
-		uint16_t value = this->_memory.readWord(this->pc + 1);
+		uint16_t value = this->_gb.readWord(this->pc + 1);
 		this->writeRegister16(high, low, value);
 		this->pc += 3;
 		this->_cycleTimer += 12;
@@ -400,7 +401,7 @@ namespace gbmu
 
 	void CPU::ld_sp_u16()
 	{
-		this->sp = this->_memory.readWord(this->pc + 1);
+		this->sp = this->_gb.readWord(this->pc + 1);
 		this->pc += 3;
 		this->_cycleTimer += 12;
 	}
@@ -459,7 +460,7 @@ namespace gbmu
 
 	void CPU::ld_u16_sp()
 	{
-		this->_memory.writeWord(this->_memory.readWord(this->pc + 1), this->sp);
+		this->_gb.writeWord(this->_gb.readWord(this->pc + 1), this->sp);
 		this->pc += 3;
 		this->_cycleTimer += 20;
 	}
@@ -484,7 +485,7 @@ namespace gbmu
 
 	void CPU::add_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::A] += src;
 		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
 								  (static_cast<uint16_t>(dest) + src > 0xFF ? FLAG_CARRY : 0) |
@@ -495,7 +496,7 @@ namespace gbmu
 
 	void CPU::sub_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::A] -= src;
 		this->registers[Reg::F] = ((dest & 0xF) - (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
 								  (dest < src ? FLAG_CARRY : 0) | (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
@@ -505,7 +506,7 @@ namespace gbmu
 
 	void CPU::and_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::F] = ((dest & src) == 0 ? FLAG_ZERO : 0) | FLAG_HALF_CARRY;
 		this->registers[Reg::A] &= src;
 		this->pc++;
@@ -514,7 +515,7 @@ namespace gbmu
 
 	void CPU::or_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::F] = ((dest | src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] |= src;
 		this->pc++;
@@ -523,7 +524,7 @@ namespace gbmu
 
 	void CPU::adc_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::A] = this->registers[Reg::A] + src + this->isFlagSet(FLAG_CARRY);
 		int res = dest + src + this->isFlagSet(FLAG_CARRY);
 		int halfRes = (dest & 0xF) + (src & 0xF) + this->isFlagSet(FLAG_CARRY);
@@ -536,7 +537,7 @@ namespace gbmu
 
 	void CPU::sbc_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::A] = this->registers[Reg::A] - src - this->isFlagSet(FLAG_CARRY);
 
 		int signedRes = static_cast<int>(dest) - src - this->isFlagSet(FLAG_CARRY);
@@ -550,7 +551,7 @@ namespace gbmu
 
 	void CPU::xor_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::F] = ((dest ^ src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] ^= src;
 		this->pc++;
@@ -559,7 +560,7 @@ namespace gbmu
 
 	void CPU::cp_a_hl()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->readRegister16(Reg::H, Reg::L));
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->readRegister16(Reg::H, Reg::L));
 		this->registers[Reg::F] = ((dest & 0xF) - (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
 								  (dest < src ? FLAG_CARRY : 0) | (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
 		this->pc++;
@@ -643,7 +644,7 @@ namespace gbmu
 	{
 		if (cond)
 		{
-			this->pc += static_cast<int8_t>(this->_memory.readByte(this->pc + 1));
+			this->pc += static_cast<int8_t>(this->_gb.readByte(this->pc + 1));
 			this->_cycleTimer += 12;
 		}
 		else
@@ -653,8 +654,7 @@ namespace gbmu
 
 	void CPU::ld_hl_reg(int opcode)
 	{
-		this->_memory.writeByte(this->registers[Reg::H] << 8 | this->registers[Reg::L],
-								this->registers[opcode & 0b111]);
+		this->_gb.writeByte(this->registers[Reg::H] << 8 | this->registers[Reg::L], this->registers[opcode & 0b111]);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -662,14 +662,14 @@ namespace gbmu
 	void CPU::ld_reg_hl(int opcode)
 	{
 		this->registers[opcode >> 3 & 0b111] =
-			this->_memory.readByte(this->registers[Reg::H] << 8 | this->registers[Reg::L]);
+			this->_gb.readByte(this->registers[Reg::H] << 8 | this->registers[Reg::L]);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
 
 	void CPU::ld_reg_u8(int opcode)
 	{
-		this->registers[opcode + 0x40 >> 3 & 0b111] = this->_memory.readByte(this->pc + 1);
+		this->registers[opcode + 0x40 >> 3 & 0b111] = this->_gb.readByte(this->pc + 1);
 		this->pc += 2;
 		this->_cycleTimer += 8;
 	}
@@ -722,7 +722,7 @@ namespace gbmu
 	{
 		if (cond)
 		{
-			this->pc = this->_memory.readWord(this->pc + 1);
+			this->pc = this->_gb.readWord(this->pc + 1);
 			this->_cycleTimer += 16;
 		}
 		else
@@ -735,7 +735,7 @@ namespace gbmu
 	void CPU::ld_dec_hl_a()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		this->_memory.writeByte(addr, this->registers[Reg::A]);
+		this->_gb.writeByte(addr, this->registers[Reg::A]);
 		this->writeRegister16(Reg::H, Reg::L, addr - 1);
 		this->pc++;
 		this->_cycleTimer += 8;
@@ -744,7 +744,7 @@ namespace gbmu
 	void CPU::ld_inc_hl_a()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		this->_memory.writeByte(addr, this->registers[Reg::A]);
+		this->_gb.writeByte(addr, this->registers[Reg::A]);
 		this->writeRegister16(Reg::H, Reg::L, addr + 1);
 		this->pc++;
 		this->_cycleTimer += 8;
@@ -753,7 +753,7 @@ namespace gbmu
 	void CPU::ld_reg16_a(Register high, Register low)
 	{
 		uint16_t addr = this->readRegister16(high, low);
-		this->_memory.writeByte(addr, this->registers[Reg::A]);
+		this->_gb.writeByte(addr, this->registers[Reg::A]);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -770,35 +770,35 @@ namespace gbmu
 
 	void CPU::ldh_u8_a()
 	{
-		this->_memory.writeByte(0xFF00 + this->_memory.readByte(this->pc + 1), this->registers[Reg::A]);
+		this->_gb.writeByte(0xFF00 + this->_gb.readByte(this->pc + 1), this->registers[Reg::A]);
 		this->pc += 2;
 		this->_cycleTimer += 12;
 	}
 
 	void CPU::ldh_c_a()
 	{
-		this->_memory.writeByte(0xFF00 + this->registers[Reg::C], this->registers[Reg::A]);
+		this->_gb.writeByte(0xFF00 + this->registers[Reg::C], this->registers[Reg::A]);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
 
 	void CPU::ldh_a_u8()
 	{
-		this->registers[Reg::A] = this->_memory.readByte(0xFF00 + this->_memory.readByte(this->pc + 1));
+		this->registers[Reg::A] = this->_gb.readByte(0xFF00 + this->_gb.readByte(this->pc + 1));
 		this->pc += 2;
 		this->_cycleTimer += 12;
 	}
 
 	void CPU::ldh_a_c()
 	{
-		this->registers[Reg::A] = this->_memory.readByte(0xFF00 + this->registers[Reg::C]);
+		this->registers[Reg::A] = this->_gb.readByte(0xFF00 + this->registers[Reg::C]);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
 
 	void CPU::adc_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::A] += src + this->isFlagSet(FLAG_CARRY);
 
 		int res = dest + src + this->isFlagSet(FLAG_CARRY);
@@ -812,7 +812,7 @@ namespace gbmu
 
 	void CPU::sbc_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::A] = this->registers[Reg::A] - src - this->isFlagSet(FLAG_CARRY);
 
 		int signedRes = static_cast<int>(dest) - src - this->isFlagSet(FLAG_CARRY);
@@ -826,7 +826,7 @@ namespace gbmu
 
 	void CPU::xor_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::A] ^= src;
 		this->registers[Reg::F] = (this->registers[Reg::A] == 0 ? FLAG_ZERO : 0);
 		this->pc += 2;
@@ -835,7 +835,7 @@ namespace gbmu
 
 	void CPU::cp_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::F] = ((dest & 0xF) < (src & 0xF) ? FLAG_HALF_CARRY : 0) | (dest < src ? FLAG_CARRY : 0) |
 								  (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
 		this->pc += 2;
@@ -845,7 +845,7 @@ namespace gbmu
 	void CPU::ld_a_reg16(Register high, Register low)
 	{
 		uint16_t addr = this->readRegister16(high, low);
-		this->registers[Reg::A] = this->_memory.readByte(addr);
+		this->registers[Reg::A] = this->_gb.readByte(addr);
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -853,7 +853,7 @@ namespace gbmu
 	void CPU::ld_a_inc_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		this->registers[Reg::A] = this->_memory.readByte(addr);
+		this->registers[Reg::A] = this->_gb.readByte(addr);
 		this->writeRegister16(Reg::H, Reg::L, addr + 1);
 		this->pc++;
 		this->_cycleTimer += 8;
@@ -862,7 +862,7 @@ namespace gbmu
 	void CPU::ld_a_dec_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		this->registers[Reg::A] = this->_memory.readByte(addr);
+		this->registers[Reg::A] = this->_gb.readByte(addr);
 		this->writeRegister16(Reg::H, Reg::L, addr - 1);
 		this->pc++;
 		this->_cycleTimer += 8;
@@ -873,8 +873,8 @@ namespace gbmu
 		if (cond)
 		{
 			this->sp -= 2;
-			this->_memory.writeWord(this->sp, this->pc + 3);
-			this->pc = this->_memory.readWord(this->pc + 1);
+			this->_gb.writeWord(this->sp, this->pc + 3);
+			this->pc = this->_gb.readWord(this->pc + 1);
 			this->_cycleTimer += 24;
 		}
 		else
@@ -888,7 +888,7 @@ namespace gbmu
 	{
 		if (cond)
 		{
-			this->pc = this->_memory.readWord(this->sp);
+			this->pc = this->_gb.readWord(this->sp);
 			this->sp += 2;
 			this->_cycleTimer += 20;
 		}
@@ -907,14 +907,14 @@ namespace gbmu
 
 	void CPU::ret() // Only 16 cycles
 	{
-		this->pc = this->_memory.readWord(this->sp);
+		this->pc = this->_gb.readWord(this->sp);
 		this->sp += 2;
 		this->_cycleTimer += 16;
 	}
 
 	void CPU::reti()
 	{
-		this->pc = this->_memory.readWord(this->sp);
+		this->pc = this->_gb.readWord(this->sp);
 		this->sp += 2;
 		this->ime = true;
 		this->_cycleTimer += 16;
@@ -924,14 +924,14 @@ namespace gbmu
 	{
 		uint16_t addr = opcode - 0xC7;
 		this->sp -= 2;
-		this->_memory.writeWord(this->sp, this->pc + 1);
+		this->_gb.writeWord(this->sp, this->pc + 1);
 		this->pc = addr;
 		this->_cycleTimer += 16;
 	}
 
 	void CPU::add_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::A] += src;
 		this->registers[Reg::F] = ((dest & 0xF) + (src & 0xF) > 0xF ? FLAG_HALF_CARRY : 0) |
 								  (static_cast<uint16_t>(dest) + src > 0xFF ? FLAG_CARRY : 0) |
@@ -942,7 +942,7 @@ namespace gbmu
 
 	void CPU::sub_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::A] -= src;
 		this->registers[Reg::F] = ((dest & 0xF) - (src & 0xF) & 0x10 ? FLAG_HALF_CARRY : 0) |
 								  (dest < src ? FLAG_CARRY : 0) | (dest == src ? FLAG_ZERO : 0) | FLAG_NEGATIVE;
@@ -952,7 +952,7 @@ namespace gbmu
 
 	void CPU::and_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::F] = ((dest & src) == 0 ? FLAG_ZERO : 0) | FLAG_HALF_CARRY;
 		this->registers[Reg::A] &= src;
 		this->pc += 2;
@@ -961,7 +961,7 @@ namespace gbmu
 
 	void CPU::or_a_u8()
 	{
-		uint8_t dest = this->registers[Reg::A], src = this->_memory.readByte(this->pc + 1);
+		uint8_t dest = this->registers[Reg::A], src = this->_gb.readByte(this->pc + 1);
 		this->registers[Reg::F] = ((dest | src) == 0 ? FLAG_ZERO : 0);
 		this->registers[Reg::A] |= src;
 		this->pc += 2;
@@ -980,7 +980,7 @@ namespace gbmu
 		}
 		uint16_t val = this->readRegister16(high, low);
 		this->sp -= 2;
-		this->_memory.writeWord(this->sp, val);
+		this->_gb.writeWord(this->sp, val);
 		this->pc++;
 		this->_cycleTimer += 16;
 	}
@@ -995,7 +995,7 @@ namespace gbmu
 			high = Reg::A;
 			low = Reg::F;
 		}
-		uint16_t val = this->_memory.readWord(this->sp);
+		uint16_t val = this->_gb.readWord(this->sp);
 		this->sp += 2;
 		this->writeRegister16(high, low, val);
 		if (low == Reg::F)
@@ -1007,10 +1007,10 @@ namespace gbmu
 	void CPU::inc_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		uint8_t upperNibbleBefore = (val >> 4);
-		this->_memory.writeByte(addr, val + 1);
-		uint8_t upperNibbleAfter = (this->_memory.readByte(addr) >> 4);
+		this->_gb.writeByte(addr, val + 1);
+		uint8_t upperNibbleAfter = (this->_gb.readByte(addr) >> 4);
 		this->registers[Reg::F] = (val == 0xFF ? FLAG_ZERO : 0) |
 								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0) |
 								  this->getFlag(FLAG_CARRY);
@@ -1021,10 +1021,10 @@ namespace gbmu
 	void CPU::dec_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		uint8_t upperNibbleBefore = (val >> 4);
-		this->_memory.writeByte(addr, val - 1);
-		uint8_t upperNibbleAfter = (this->_memory.readByte(addr) >> 4);
+		this->_gb.writeByte(addr, val - 1);
+		uint8_t upperNibbleAfter = (this->_gb.readByte(addr) >> 4);
 		this->registers[Reg::F] = (val == 1 ? FLAG_ZERO : 0) |
 								  (upperNibbleBefore != upperNibbleAfter ? FLAG_HALF_CARRY : 0) |
 								  this->getFlag(FLAG_CARRY) | FLAG_NEGATIVE;
@@ -1034,7 +1034,7 @@ namespace gbmu
 
 	void CPU::add_sp_i8()
 	{
-		int8_t val = this->_memory.readByte(this->pc + 1);
+		int8_t val = this->_gb.readByte(this->pc + 1);
 		if (val >= 0)
 		{
 			this->registers[Reg::F] = ((this->sp & 0xFF) + val > 0xFF ? FLAG_CARRY : 0) |
@@ -1052,7 +1052,7 @@ namespace gbmu
 
 	void CPU::ld_hl_sp_i8()
 	{
-		int8_t val = this->_memory.readByte(this->pc + 1);
+		int8_t val = this->_gb.readByte(this->pc + 1);
 		this->writeRegister16(Reg::H, Reg::L, this->sp + val);
 		if (val >= 0)
 		{
@@ -1077,16 +1077,16 @@ namespace gbmu
 
 	void CPU::ld_u16_a()
 	{
-		uint16_t addr = this->_memory.readWord(this->pc + 1);
-		this->_memory.writeByte(addr, this->registers[Reg::A]);
+		uint16_t addr = this->_gb.readWord(this->pc + 1);
+		this->_gb.writeByte(addr, this->registers[Reg::A]);
 		this->pc += 3;
 		this->_cycleTimer += 16;
 	}
 
 	void CPU::ld_a_u16()
 	{
-		uint16_t addr = this->_memory.readWord(this->pc + 1);
-		this->registers[Reg::A] = this->_memory.readByte(addr);
+		uint16_t addr = this->_gb.readWord(this->pc + 1);
+		this->registers[Reg::A] = this->_gb.readByte(addr);
 		this->pc += 3;
 		this->_cycleTimer += 16;
 	}
@@ -1094,7 +1094,7 @@ namespace gbmu
 	void CPU::ld_hl_u8()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		this->_memory.writeByte(addr, this->_memory.readByte(this->pc + 1));
+		this->_gb.writeByte(addr, this->_gb.readByte(this->pc + 1));
 		this->pc += 2;
 		this->_cycleTimer += 12;
 	}
@@ -1197,7 +1197,7 @@ namespace gbmu
 	std::ostream& operator<<(std::ostream& os, const CPU& cpu)
 	{
 		os << std::hex << std::setw(4) << std::setfill('0') << cpu.pc << ":  " << std::setw(2) << std::setfill('0')
-		   << (int)cpu._memory.readByte(cpu.pc) << "     ";
+		   << (int)cpu._gb.readByte(cpu.pc) << "     ";
 		os << "A:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::A]) << " "
 		   << "F:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::F]) << " "
 		   << "B:" << std::setw(2) << std::setfill('0') << static_cast<uint16_t>(cpu.registers[CPU::Reg::B]) << " "
@@ -1214,10 +1214,10 @@ namespace gbmu
 	void CPU::rlc_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, (val << 1) | (val >> 7));
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, (val << 1) | (val >> 7));
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1225,10 +1225,10 @@ namespace gbmu
 	void CPU::rrc_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, (val >> 1) | (val << 7));
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, (val >> 1) | (val << 7));
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1236,11 +1236,11 @@ namespace gbmu
 	void CPU::rl_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		bool carry = this->isFlagSet(FLAG_CARRY);
 		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, (val << 1) | carry);
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, (val << 1) | carry);
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1248,11 +1248,11 @@ namespace gbmu
 	void CPU::rr_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		bool carry = this->isFlagSet(FLAG_CARRY);
 		this->registers[Reg::F] = (val & 0x1) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, (val >> 1) | (carry << 7));
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, (val >> 1) | (carry << 7));
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1260,10 +1260,10 @@ namespace gbmu
 	void CPU::sla_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] = (val & 0x80) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, val << 1);
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, val << 1);
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1271,10 +1271,10 @@ namespace gbmu
 	void CPU::sra_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, (val >> 1) | (val & 0x80));
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, (val >> 1) | (val & 0x80));
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1282,10 +1282,10 @@ namespace gbmu
 	void CPU::srl_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] = (val & 0x01) ? FLAG_CARRY : 0;
-		this->_memory.writeByte(addr, val >> 1);
-		this->registers[Reg::F] |= (this->_memory.readByte(addr) == 0) ? FLAG_ZERO : 0;
+		this->_gb.writeByte(addr, val >> 1);
+		this->registers[Reg::F] |= (this->_gb.readByte(addr) == 0) ? FLAG_ZERO : 0;
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1293,9 +1293,9 @@ namespace gbmu
 	void CPU::swap_hl()
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
-		this->_memory.writeByte(addr, (val >> 4) | (val << 4));
-		this->registers[Reg::F] = (this->_memory.readByte(addr) == 0 ? FLAG_ZERO : 0);
+		uint8_t val = this->_gb.readByte(addr);
+		this->_gb.writeByte(addr, (val >> 4) | (val << 4));
+		this->registers[Reg::F] = (this->_gb.readByte(addr) == 0 ? FLAG_ZERO : 0);
 		this->pc++;
 		this->_cycleTimer += 12;
 	}
@@ -1303,7 +1303,7 @@ namespace gbmu
 	void CPU::bit_hl(uint8_t bit)
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
+		uint8_t val = this->_gb.readByte(addr);
 		this->registers[Reg::F] =
 			((val & (1 << bit)) == 0 ? FLAG_ZERO : 0) | FLAG_HALF_CARRY | this->getFlag(FLAG_CARRY);
 		this->pc++;
@@ -1313,8 +1313,8 @@ namespace gbmu
 	void CPU::res_hl(uint8_t bit)
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
-		this->_memory.writeByte(addr, val & ~(1 << bit));
+		uint8_t val = this->_gb.readByte(addr);
+		this->_gb.writeByte(addr, val & ~(1 << bit));
 		this->pc++;
 		this->_cycleTimer += 8;
 	}
@@ -1322,8 +1322,8 @@ namespace gbmu
 	void CPU::set_hl(uint8_t bit)
 	{
 		uint16_t addr = this->readRegister16(Reg::H, Reg::L);
-		uint8_t val = this->_memory.readByte(addr);
-		this->_memory.writeByte(addr, val | (1 << bit));
+		uint8_t val = this->_gb.readByte(addr);
+		this->_gb.writeByte(addr, val | (1 << bit));
 		this->pc++;
 		this->_cycleTimer += 8;
 	}

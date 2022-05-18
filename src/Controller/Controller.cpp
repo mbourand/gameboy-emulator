@@ -1,4 +1,4 @@
-#include "Joypad.hpp"
+#include "Controller.hpp"
 #include "Memory.hpp"
 #include "utils.hpp"
 #include <SFML/Graphics.hpp>
@@ -7,7 +7,7 @@
 
 namespace gbmu
 {
-	void Joypad::update()
+	void Controller::update()
 	{
 		static sf::Keyboard::Key buttons[8] = {
 			sf::Keyboard::Right, sf::Keyboard::Left, sf::Keyboard::Up, sf::Keyboard::Down,
@@ -20,7 +20,7 @@ namespace gbmu
 				this->_buttonsPressed |= (1 << i);
 	}
 
-	int Joypad::getJoypadState(uint8_t joyp) const
+	int Controller::getJoypadState(uint8_t joyp) const
 	{
 		bool checkDirections = !((joyp >> 4) & 0b1);
 		bool checkActions = !((joyp >> 5) & 0b1);

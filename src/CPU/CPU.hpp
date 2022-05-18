@@ -9,6 +9,8 @@
 
 namespace gbmu
 {
+	class Gameboy;
+
 	class CPU
 	{
 	public:
@@ -40,7 +42,7 @@ namespace gbmu
 		using Reg = Register;
 
 	protected:
-		Memory& _memory;
+		Gameboy& _gb;
 		gbmu::Clock _divClock, _timaClock;
 
 		bool _ei_next_instruction = true;
@@ -65,7 +67,7 @@ namespace gbmu
 		CPU() = default;
 		CPU(const CPU& other) = default;
 		CPU& operator=(const CPU& other) = default;
-		CPU(Memory& memory);
+		CPU(Gameboy& gb);
 
 		void writeRegister16(Register high, Register low, uint16_t value);
 		uint16_t readRegister16(Register high, Register low);

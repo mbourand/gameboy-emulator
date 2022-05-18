@@ -7,6 +7,8 @@
 
 namespace gbmu
 {
+	class Gameboy;
+
 	class PPU
 	{
 	public:
@@ -45,7 +47,7 @@ namespace gbmu
 		};
 
 	protected:
-		Memory& _memory;
+		Gameboy& _gb;
 		State _state;
 		uint32_t _ticks;
 		std::array<sf::Color, 4> _gbColors;
@@ -55,7 +57,9 @@ namespace gbmu
 		bool _lcdWasDisabled;
 
 	public:
-		PPU(Memory& memory);
+		PPU() = default;
+		PPU(Gameboy& memory);
+		PPU& operator=(const PPU&) = default;
 
 		void tick();
 

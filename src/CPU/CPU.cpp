@@ -1,11 +1,12 @@
 #include "CPU.hpp"
+#include "Gameboy.hpp"
 
 namespace gbmu
 {
-	CPU::CPU(Memory& memory)
-		: _memory(memory), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0),
-		  _divClock(gbmu::Clock(DIV_FREQUENCY)), _timaClock(gbmu::Clock(0.0)), halted(false), ime(false), _ticks(0),
-		  _divLastInc(0), _timaLastInc(0), _ei_next_instruction(false), stopped(false), _timaOverflowAt(0)
+	CPU::CPU(Gameboy& gb)
+		: _gb(gb), sp(ENTRY_STACK_POINTER), pc(ENTRY_POINT), _cycleTimer(0), _divClock(gbmu::Clock(DIV_FREQUENCY)),
+		  _timaClock(gbmu::Clock(0.0)), halted(false), ime(false), _ticks(0), _divLastInc(0), _timaLastInc(0),
+		  _ei_next_instruction(false), stopped(false), _timaOverflowAt(0)
 	{
 		/*this->registers[Register::A] = 0x01;
 		this->registers[Register::F] = 0xB0;
@@ -54,11 +55,11 @@ namespace gbmu
 		if (this->_timaOverflowAt < this->_ticks)
 		{
 			this->_timaOverflowAt = 0xFFFFFFFFFFFFFFFF;
-			this->_memory.writeByte(Memory::TIMA, this->_memory.readByte(Memory::TMA));
+			this->_gb.writeByte(Memory::TIMA, this->_gb.readByte(Memory::TMA));
 			this->_request_interrupt(Interrupt::Timer);
 		}
 
-		if ((this->_memory.readByte(Memory::IF) & this->_memory.readByte(Memory::IE)))
+		if ((this->_gb.readByte(Memory::IF) & this->_gb.readByte(Memory::IE)))
 		{
 			this->halted = false;
 			this->stopped = false;
@@ -68,15 +69,12 @@ namespace gbmu
 		{
 			for (uint8_t bit = 0; bit < 5; ++bit)
 			{
-				if ((this->_memory.readByte(Memory::IF) & (1 << bit)) &&
-					(this->_memory.readByte(Memory::IE) & (1 << bit)))
+				if ((this->_gb.readByte(Memory::IF) & (1 << bit)) && (this->_gb.readByte(Memory::IE) & (1 << bit)))
 				{
-					if (bit == 4)
-						std::cout << "INTERRUPT" << std::endl;
-					this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) & ~(1 << bit));
+					this->_gb.writeByte(Memory::IF, this->_gb.readByte(Memory::IF) & ~(1 << bit));
 					this->ime = false;
 					this->sp -= 2;
-					this->_memory.writeWord(this->sp, this->pc);
+					this->_gb.writeWord(this->sp, this->pc);
 					this->pc = 0x0040 + bit * 8;
 					this->_ticks += 20;
 					return 20;
@@ -92,11 +90,11 @@ namespace gbmu
 
 		if (!this->halted && !this->stopped)
 		{
-			uint8_t opcode = this->_memory.readByte(this->pc);
+			uint8_t opcode = this->_gb.readByte(this->pc);
 			if (opcode == 0xCB) // PREFIX CB
 			{
 				this->_cycleTimer += 4;
-				opcode = this->_memory.readByte(++this->pc);
+				opcode = this->_gb.readByte(++this->pc);
 				perform_opcode_cb(opcode);
 			}
 			else
@@ -130,17 +128,17 @@ namespace gbmu
 	{
 		if (this->stopped)
 		{
-			this->_memory.setDivTimer(0);
+			this->_gb.setDivTimer(0);
 			this->_divLastInc = this->_ticks;
 		}
 
 		if (this->_ticks - this->_divLastInc >= CPU::CPU_FREQUENCY / CPU::DIV_FREQUENCY)
 		{
 			this->_divLastInc = this->_ticks;
-			this->_memory.setDivTimer(this->_memory.readByte(Memory::DIV) + 1);
+			this->_gb.setDivTimer(this->_gb.readByte(Memory::DIV) + 1);
 		}
 
-		uint8_t timer_control = this->_memory.readByte(Memory::TAC);
+		uint8_t timer_control = this->_gb.readByte(Memory::TAC);
 		if (timer_control & 0b100)
 		{
 			uint32_t timer_frequency = (4 << (timer_control & 0b11) * 2);
@@ -150,8 +148,8 @@ namespace gbmu
 			if (this->_ticks - this->_timaLastInc >= timer_frequency)
 			{
 				this->_timaLastInc = this->_ticks;
-				uint8_t tima = this->_memory.readByte(Memory::TIMA);
-				this->_memory.writeByte(Memory::TIMA, tima + 1);
+				uint8_t tima = this->_gb.readByte(Memory::TIMA);
+				this->_gb.writeByte(Memory::TIMA, tima + 1);
 				if (tima == 0xFF)
 					this->_timaOverflowAt = this->_ticks;
 			}
@@ -160,7 +158,7 @@ namespace gbmu
 
 	void CPU::_request_interrupt(Interrupt interrupt)
 	{
-		this->_memory.writeByte(Memory::IF, this->_memory.readByte(Memory::IF) | interrupt);
+		this->_gb.writeByte(Memory::IF, this->_gb.readByte(Memory::IF) | interrupt);
 	}
 
 	bool CPU::isFlagSet(uint8_t flag) { return (this->registers[static_cast<uint8_t>(Reg::F)] & flag) != 0; }
