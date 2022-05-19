@@ -4,7 +4,7 @@
 
 namespace gbmu
 {
-	PPU::PPU(Gameboy& gb) : _gb(gb), _state(State::OAMSearch), _ticks(0), _lcdWasDisabled(false)
+	PPU::PPU(Gameboy& gb) : _gb(gb), _state(State::OAMSearch), _ticks(0), _lcdWasDisabled(false), _winLineCounter(0)
 	{
 		this->_lcdPixels.create(160, 144);
 		this->_finishedLcdPixels.create(160, 144);
@@ -34,6 +34,8 @@ namespace gbmu
 			this->_gb.writeByte(0xFF44, 0);
 			this->_updateLCDStatus(0x0);
 			this->_lcdWasDisabled = true;
+			_winLineCounter = 0;
+			_selectedOamEntries.clear();
 			return;
 		}
 
@@ -90,6 +92,7 @@ namespace gbmu
 				{
 					this->_gb.writeByte(0xFF44, 0);
 					this->_state = State::OAMSearch;
+					_winLineCounter = 0;
 					this->_updateLCDStatus(LCDStatus::OAMSearchInt);
 				}
 				break;
@@ -116,6 +119,28 @@ namespace gbmu
 			this->_oamEntries.push_back(OAMEntry(x, y, tileIndex, flags));
 			oamAddress += 4;
 		}
+		uint8_t lcdc = this->_gb.readByte(0xFF40);
+		uint8_t ly = this->_gb.readByte(0xFF44);
+
+		uint8_t objSize = (lcdc & LCDC::ObjSize) ? 16 : 8;
+
+		_selectedOamEntries.clear();
+		for (auto& entry : this->_oamEntries)
+		{
+			int16_t yPos = entry.y - 16;
+			if (yPos <= ly && ly < yPos + objSize)
+			{
+				this->_selectedOamEntries.push_back(entry);
+				if (this->_selectedOamEntries.size() == 10)
+					break;
+			}
+		}
+
+		uint8_t wy = this->_gb.readByte(0xFF4A);
+		uint8_t wx = this->_gb.readByte(0xFF4B);
+		if (((lcdc & (LCDC::WinEnable | LCDC::BgWinEnable)) == (LCDC::WinEnable | LCDC::BgWinEnable)) && wy <= ly &&
+			wx <= 166)
+			_winLineCounter++;
 	}
 
 	void PPU::_updateLCDStatus(uint8_t interruptsToCheck)
@@ -153,20 +178,17 @@ namespace gbmu
 		uint8_t scy = this->_gb.readByte(0xFF42);
 		uint8_t scx = this->_gb.readByte(0xFF43);
 		uint8_t wy = this->_gb.readByte(0xFF4A);
-		uint8_t wx = this->_gb.readByte(0xFF4B) - 7;
+		int16_t wx = this->_gb.readByte(0xFF4B) - 7;
+		uint8_t lcdc = this->_gb.readByte(0xFF40);
 
-		bool windowOn = ((this->_gb.readByte(0xFF40) & 0b00000101) == 0b101) && wy <= ly;
+		bool windowOn =
+			((lcdc & (LCDC::WinEnable | LCDC::BgWinEnable)) == (LCDC::WinEnable | LCDC::BgWinEnable)) && wy <= ly;
 
 		uint8_t bgPalette = this->_gb.readByte(0xFF47);
-
-		uint8_t lcdc = this->_gb.readByte(0xFF40);
 
 		uint16_t bgTileMap = (lcdc & LCDC::BgTileMapArea) ? 0x9C00 : 0x9800;
 		uint16_t winTileMapArea = (lcdc & LCDC::WinTileMapArea) ? 0x9C00 : 0x9800;
 		uint16_t tileData = (lcdc & LCDC::BgWinTileDataArea) ? 0x8000 : 0x8800;
-
-		uint8_t yPos = windowOn ? ly - wy : scy + ly;
-		uint8_t tileRowInMap = yPos / 8;
 
 		for (uint8_t x = 0; x < 160; x++)
 		{
@@ -174,10 +196,14 @@ namespace gbmu
 
 			if (lcdc & LCDC::BgWinEnable)
 			{
-				uint8_t xPos = windowOn ? x - wx : scx + x;
+				bool winThisPixel = windowOn && x >= wx;
+				uint8_t yPos = winThisPixel ? _winLineCounter - 1 : scy + ly;
+				uint8_t tileRowInMap = yPos / 8;
+				uint8_t xPos = winThisPixel ? x - wx : scx + x;
 				uint8_t tileColInMap = xPos / 8;
 
-				uint16_t tileAddressInMap = (windowOn ? winTileMapArea : bgTileMap) + tileRowInMap * 32 + tileColInMap;
+				uint16_t tileAddressInMap =
+					(winThisPixel ? winTileMapArea : bgTileMap) + tileRowInMap * 32 + tileColInMap;
 				int16_t tileOffsetInData = this->_gb.readByte(tileAddressInMap);
 
 				uint16_t tileAddressInData = tileData;
@@ -203,26 +229,29 @@ namespace gbmu
 			if (lcdc & LCDC::ObjEnable)
 			{
 				uint8_t objSize = (lcdc & LCDC::ObjSize) ? 16 : 8;
-				for (auto& entry : this->_oamEntries)
+				for (auto& entry : this->_selectedOamEntries)
 				{
 					if ((entry.flags & OAMFlags::BgWinOverOBJ) && colorDrewByBg != 0)
 						continue;
-					uint8_t xPos = entry.x - 1;
-					uint8_t yPos = entry.y - 8 - 1;
-					uint8_t tileIndex = (objSize == 8 ? entry.tileIndex : entry.tileIndex & 0xFE);
+					int16_t xPos = entry.x - 8;
+					int16_t yPos = entry.y - 16;
+					uint8_t tileIndex = (objSize == 8 ? entry.tileIndex : (entry.tileIndex & 0xFE));
 
-					if (yPos >= ly && yPos < ly + objSize && xPos >= x && xPos < x + 8)
+					if (xPos <= x && x < xPos + 8)
 					{
 						bool flipY = entry.flags & OAMFlags::FlipY;
 						bool flipX = entry.flags & OAMFlags::FlipX;
 
-						uint8_t tileRow = (yPos - ly) % objSize;
-						if (!flipY)
+						uint8_t tileRow = (ly - yPos) % objSize;
+						if (flipY)
 							tileRow = (objSize - 1) - tileRow;
-						uint8_t tileCol = (xPos - x) % 8;
-
 						if (tileRow >= 8)
+						{
+							tileRow -= 8;
 							tileIndex |= 1;
+						}
+
+						uint8_t tileCol = (x - xPos) % 8;
 
 						uint16_t tileAddressInData = 0x8000 + tileIndex * 16;
 
@@ -231,10 +260,10 @@ namespace gbmu
 
 						uint8_t colorId = 0;
 						if (flipX)
+							colorId = (((tileDataHigh >> tileCol) & 1) << 1) | ((tileDataLow >> tileCol) & 1);
+						else
 							colorId =
 								(((tileDataHigh >> (7 - tileCol)) & 1) << 1) | ((tileDataLow >> (7 - tileCol)) & 1);
-						else
-							colorId = (((tileDataHigh >> tileCol) & 1) << 1) | ((tileDataLow >> tileCol) & 1);
 
 						uint16_t paletteAddr = (entry.flags & OAMFlags::PaletteNumber) ? 0xFF49 : 0xFF48;
 						sf::Color color = this->getPaletteColor(colorId, this->_gb.readByte(paletteAddr), true);

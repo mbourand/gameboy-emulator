@@ -79,6 +79,9 @@ namespace gbmu
 
 		bool _lcdWasDisabled;
 
+		uint8_t _winLineCounter;
+		std::vector<OAMEntry> _selectedOamEntries;
+
 	public:
 		PPU() = default;
 		PPU(Gameboy& memory);
