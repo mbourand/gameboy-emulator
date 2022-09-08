@@ -134,7 +134,7 @@ namespace gbmu
 
 		if (this->_ticks - this->_divLastInc >= CPU::CPU_FREQUENCY / CPU::DIV_FREQUENCY)
 		{
-			this->_divLastInc = this->_ticks;
+			this->_divLastInc += CPU::CPU_FREQUENCY / CPU::DIV_FREQUENCY;
 			this->_gb.setDivTimer(this->_gb.readByte(Memory::DIV) + 1);
 		}
 
@@ -151,7 +151,7 @@ namespace gbmu
 				uint8_t tima = this->_gb.readByte(Memory::TIMA);
 				this->_gb.writeByte(Memory::TIMA, tima + 1);
 				if (tima == 0xFF)
-					this->_timaOverflowAt = this->_ticks;
+					this->_timaOverflowAt = this->_timaLastInc;
 			}
 		}
 	}
